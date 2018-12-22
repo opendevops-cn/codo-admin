@@ -1,0 +1,8 @@
+do_mg:
+  restart: unless-stopped
+  image: do_mg_image
+  volumes:
+    - /var/log/supervisor/:/var/log/supervisor/
+    - /sys/fs/cgroup:/sys/fs/cgroup
+  ports:
+    - "8010:80"

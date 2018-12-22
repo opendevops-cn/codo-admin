@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Contact : 191715030@qq.com
+Author  : shenshuo
+Date    : 2018/12/7
+Desc    : 系统配置API
+"""
+
+import time
+import json
+from libs.base_handler import BaseHandler
+from websdk.utils import SendMail, SendSms
+from websdk.consts import const
+from websdk.tools import convert
+from websdk.cache_context import cache_conn
+
+from .configs_init import configs_init
+from models.app_config import AppSettings
+from models.admin import Users
+from websdk.db_context import DBContext
+
+
+class AppSettingsHandler(BaseHandler):
+    def get(self, setting_key):
+        return_code = configs_init(setting_key)
+        return self.write(return_code)
+
+    def post(self, *args, **kwargs):
+        data = json.loads(self.request.body.decode('utf-8'))
+        settings_key = list(data.keys())
+
+        with DBContext('w', None, True) as session:
+            for k in settings_key:
+                session.query(AppSettings).filter(AppSettings.name == k).delete(synchronize_session=False)
+            for s in settings_key:
+                new_list = AppSettings(name=s, value=data.get(s))
+                session.add(new_list)
+            session.commit()
+        return self.write(dict(code=0, msg='获取配置成功'))
+
+
+class CheckSettingsHandler(BaseHandler):
+    def post(self, *args, **kwargs):
+        data = json.loads(self.request.body.decode('utf-8'))
+        check_key = data.get('check_key')
+        user_id = self.get_current_id()
+
+        redis_conn = cache_conn()
+        config_info = redis_conn.hgetall(const.APP_SETTINGS)
+        config_info = convert(config_info)
+
+        if check_key == 'EMAIL':
+            with DBContext('r') as session:
+                mail_to = session.query(Users.email).filter(Users.user_id == user_id).first()
+
+            obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST), mail_port=config_info.get(const.EMAIL_PORT),
+                           mail_user=config_info.get(const.EMAIL_HOST_USER),
+                           mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
+                           mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False)
+
+            obj.send_mail(mail_to[0], 'OPS测试邮件', '测试发送邮件成功', subtype='plain')
+            return self.write(dict(code=0, msg='测试邮件已经发送'))
+
+        elif check_key == 'SMS':
+            obj = SendSms(config_info.get(const.SMS_REGION), config_info.get(const.SMS_DOMAIN),
+                          config_info.get(const.SMS_PRODUCT_NAME), config_info.get(const.SMS_ACCESS_KEY_ID),
+                          config_info.get(const.SMS_ACCESS_KEY_SECRET))
+
+            query_response = obj.query_send_detail('', '11111111111', 1, 1, time.strftime("%Y%m%d", time.localtime()))
+            query_response = json.loads(query_response.decode('utf-8'))
+            if query_response.get("Message") == "OK":
+                return self.write(dict(code=0, msg='测试短信成功'))
+            else:
+                return self.write(dict(code=-2, msg='测试短信失败{}'.format(str(query_response))))
+        else:
+            return self.write(dict(code=-1, msg='未知测试项目'))
+
+
+app_settings_urls = [
+    (r'/v2/sysconfig/settings/([\w-]*)/', AppSettingsHandler),
+    (r'/v2/sysconfig/check/', CheckSettingsHandler),
+]
+
+if __name__ == "__main__":
+    pass
