@@ -71,9 +71,3 @@ class BaseHandler(SDKBaseHandler):
         #         raise HTTPError(403, 'request forbidden!')
 
         ### 写入日志 改为网关收集
-
-    # def set_default_headers(self):
-    #     self.set_header("Access-Control-Allow-Origin", "*")
-    #     self.set_header("Access-Control-Allow-Headers", "x-requested-with,access_token")
-    #     self.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT, PATCH")
-    #     self.set_header("Access-Control-Max-Age", "3600")

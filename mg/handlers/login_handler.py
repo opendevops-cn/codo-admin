@@ -20,6 +20,8 @@ from .configs_init import configs_init
 from websdk.consts import const
 from websdk.cache_context import cache_conn
 
+from websdk.tools import convert
+
 
 class LoginHandler(RequestHandler):
 
@@ -35,12 +37,12 @@ class LoginHandler(RequestHandler):
         if is_mail(username):
             redis_conn = cache_conn()
             configs_init('all')
-            login_mail = redis_conn.hget(const.APP_SETTINGS,const.EMAILLOGIN_DOMAIN)
+            login_mail = redis_conn.hget(const.APP_SETTINGS, const.EMAILLOGIN_DOMAIN)
             if login_mail:
                 if is_mail(username, login_mail.decode('utf-8')):
                     email = username
                     username = email.split("@")[0]
-                    email_server = redis_conn.hget(const.APP_SETTINGS,const.EMAILLOGIN_SERVER).decode('utf-8')
+                    email_server = redis_conn.hget(const.APP_SETTINGS, const.EMAILLOGIN_SERVER).decode('utf-8')
                     if not email_server:
                         return self.write(dict(code=-9, msg='请配置邮箱服务的SMTP服务地址'))
 
@@ -77,13 +79,7 @@ class LoginHandler(RequestHandler):
                     return self.write(dict(code=-5, msg='MFA错误'))
 
             else:
-                ### 判断是否需要输入MFA
                 return self.write(dict(code=-8, msg='请输入MFA'))
-                # if user_info.last_ip:
-                #     return self.write(dict(code=-5, msg='MFA错误'))
-                # else:
-                #     qrcode = totp.provisioning_uri(user_info.email)
-                #     return self.write(dict(code=-6, msg='跳转MFA认证', key=user_info.google_key, qcode=qrcode))
 
         user_id = str(user_info.user_id)
         ### 生成token 并写入cookie
@@ -101,12 +97,14 @@ class LoginHandler(RequestHandler):
         self.set_secure_cookie("username", user_info.username)
         self.set_secure_cookie("user_id", str(user_info.user_id))
         self.set_cookie('auth_key', auth_key, expires_days=1)
-        ### 权限写入缓存
+
+        self.write(dict(code=0, auth_key=auth_key.decode(encoding="utf-8"), username=user_info.username,
+                        nickname=user_info.nickname, next_url=next_url, msg='登录成功'))
+        ### 后端权限写入缓存
         my_verify = MyVerify(user_id)
         my_verify.write_verify()
-
-        return self.write(dict(code=0, auth_key=auth_key.decode(encoding="utf-8"), username=user_info.username,
-                               nickname=user_info.nickname, next_url=next_url, msg='登录成功'))
+        ### 前端权限写入缓存
+        get_user_rules(user_id)
 
 
 class LogoutHandler(BaseHandler):
@@ -122,29 +120,36 @@ class LogoutHandler(BaseHandler):
 class AuthorizationHandler(BaseHandler):
     def get(self, *args, **kwargs):
         user_id = self.get_current_id()
-        page_data = {}
-        component_data = {}
-        with DBContext('r') as session:
-            this_menus = session.query(Menus.menu_name
-                                       ).outerjoin(RoleMenus, Menus.menu_id == RoleMenus.menu_id).outerjoin(
-                UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
+        redis_conn = cache_conn()
+        rules = convert(redis_conn.hgetall("{}_rules".format(user_id)))
 
-            this_components = session.query(Components.component_name
-                                            ).outerjoin(RolesComponents,
-                                                        Components.comp_id == RolesComponents.comp_id).outerjoin(
-                UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
+        self.write(dict(data=dict(rules=rules), code=0, msg='获取前端权限成功'))
 
-        for p in this_menus:
-            page_data[p[0]] = True
-        for c in this_components:
-            component_data[c[0]] = True
 
-        ## 插入一个没有权限的
-        page_data['all'] = False
-        component_data['all'] = False
 
-        data = dict(rules=dict(page=page_data, component=component_data))
-        return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
+def get_user_rules(user_id):
+    page_data = {}
+    component_data = {}
+    with DBContext('r') as session:
+        this_menus = session.query(Menus.menu_name
+                                   ).outerjoin(RoleMenus, Menus.menu_id == RoleMenus.menu_id).outerjoin(
+            UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
+
+        this_components = session.query(Components.component_name
+                                        ).outerjoin(RolesComponents,
+                                                    Components.comp_id == RolesComponents.comp_id).outerjoin(
+            UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
+
+    for p in this_menus:
+        page_data[p[0]] = True
+    for c in this_components:
+        component_data[c[0]] = True
+
+    ## 插入一个没有权限的
+    page_data['all'] = False
+    component_data['all'] = False
+    redis_conn = cache_conn()
+    redis_conn.hmset("{}_rules".format(user_id), dict(page=page_data, component=component_data))
 
 
 login_urls = [
