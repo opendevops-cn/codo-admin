@@ -21,6 +21,7 @@ from websdk.consts import const
 from websdk.cache_context import cache_conn
 
 from websdk.tools import convert
+from ast import literal_eval
 
 
 class LoginHandler(RequestHandler):
@@ -91,20 +92,22 @@ class LoginHandler(RequestHandler):
         if login_ip_list:
             login_ip = login_ip_list.split(",")[0]
             with DBContext('w', None, True) as session:
-                session.query(Users).filter(Users.username == username).update({Users.last_ip: login_ip})
+                session.query(Users).filter(Users.user_id == user_id).update({Users.last_ip: login_ip})
 
         self.set_secure_cookie("nickname", user_info.nickname)
         self.set_secure_cookie("username", user_info.username)
         self.set_secure_cookie("user_id", str(user_info.user_id))
         self.set_cookie('auth_key', auth_key, expires_days=1)
 
-        self.write(dict(code=0, auth_key=auth_key.decode(encoding="utf-8"), username=user_info.username,
-                        nickname=user_info.nickname, next_url=next_url, msg='登录成功'))
         ### 后端权限写入缓存
         my_verify = MyVerify(user_id)
         my_verify.write_verify()
         ### 前端权限写入缓存
         get_user_rules(user_id)
+
+        return self.write(dict(code=0, auth_key=auth_key.decode(encoding="utf-8"), username=user_info.username,
+                        nickname=user_info.nickname, next_url=next_url, msg='登录成功'))
+
 
 
 class LogoutHandler(BaseHandler):
@@ -120,12 +123,49 @@ class LogoutHandler(BaseHandler):
 class AuthorizationHandler(BaseHandler):
     def get(self, *args, **kwargs):
         user_id = self.get_current_id()
+
         redis_conn = cache_conn()
-        rules = convert(redis_conn.hgetall("{}_rules".format(user_id)))
+        page = redis_conn.hget("{}_rules".format(user_id), 'page')
+        component = redis_conn.hget("{}_rules".format(user_id), 'component')
 
-        self.write(dict(data=dict(rules=rules), code=0, msg='获取前端权限成功'))
+        data = dict(rules=dict(page=literal_eval(convert(page)), component=literal_eval(convert(component))))
+        return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
 
-
+# class AuthorizationHandler(BaseHandler):
+#     def get(self, *args, **kwargs):
+#         user_id = self.get_current_id()
+#
+#         redis_conn = cache_conn()
+#         page = redis_conn.hget("{}_rules".format(user_id), 'page')
+#         component = redis_conn.hget("{}_rules".format(user_id), 'component')
+#
+#         data1 = dict(rules=dict(page=convert(page), component=convert(component)))
+#         print(data1)
+#
+#         page_data = {}
+#         component_data = {}
+#         with DBContext('r') as session:
+#             this_menus = session.query(Menus.menu_name
+#                                        ).outerjoin(RoleMenus, Menus.menu_id == RoleMenus.menu_id).outerjoin(
+#                 UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
+#
+#             this_components = session.query(Components.component_name
+#                                             ).outerjoin(RolesComponents,
+#                                                         Components.comp_id == RolesComponents.comp_id).outerjoin(
+#                 UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
+#
+#         for p in this_menus:
+#             page_data[p[0]] = True
+#         for c in this_components:
+#             component_data[c[0]] = True
+#
+#         ## 插入一个没有权限的
+#         page_data['all'] = False
+#         component_data['all'] = False
+#
+#         data = dict(rules=dict(page=page_data, component=component_data))
+#         print(data)
+#         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
 
 def get_user_rules(user_id):
     page_data = {}
