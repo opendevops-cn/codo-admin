@@ -31,7 +31,6 @@ class LoginHandler(RequestHandler):
         username = data.get('username', None)
         password = data.get('password', None)
         dynamic = data.get('dynamic', None)
-        next_url = data.get('next_url', None)
 
         if not username or not password:
             return self.write(dict(code=-1, msg='账号密码不能为空'))
@@ -74,13 +73,15 @@ class LoginHandler(RequestHandler):
 
         ### 如果被标记为必须动态验证切没有输入动态密钥，则跳转到二维码添加密钥的地方
         if user_info.google_key:
-            totp = pyotp.TOTP(user_info.google_key)
-            if dynamic:
-                if totp.now() != str(dynamic):
+            if not dynamic:
+                ### 第一次不带MFA的认证
+                return self.write(dict(code=1, msg='跳转二次认证'))
+            else:
+                ### 二次认证
+                t_otp = pyotp.TOTP(user_info.google_key)
+                if t_otp.now() != str(dynamic):
                     return self.write(dict(code=-5, msg='MFA错误'))
 
-            else:
-                return self.write(dict(code=-8, msg='请输入MFA'))
 
         user_id = str(user_info.user_id)
         ### 生成token 并写入cookie
@@ -93,6 +94,7 @@ class LoginHandler(RequestHandler):
             login_ip = login_ip_list.split(",")[0]
             with DBContext('w', None, True) as session:
                 session.query(Users).filter(Users.user_id == user_id).update({Users.last_ip: login_ip})
+                session.commit()
 
         self.set_secure_cookie("nickname", user_info.nickname)
         self.set_secure_cookie("username", user_info.username)
@@ -105,8 +107,8 @@ class LoginHandler(RequestHandler):
         ### 前端权限写入缓存
         get_user_rules(user_id)
 
-        return self.write(dict(code=0, auth_key=auth_key.decode(encoding="utf-8"), username=user_info.username,
-                        nickname=user_info.nickname, next_url=next_url, msg='登录成功'))
+        return self.write(dict(code=0, auth_key=auth_key.decode(), username=user_info.username,
+                        nickname=user_info.nickname, msg='登录成功'))
 
 
 
