@@ -17,12 +17,12 @@ RUN xz -d Python-3.6.6.tar.xz && tar xvf Python-3.6.6.tar && cd Python-3.6.6 && 
 
 # 4. 复制代码
 RUN mkdir -p /var/www/
-ADD . /var/www/do_mg/
+ADD . /var/www/codo-admin/
 
 # 5. 安装pip依赖
 RUN pip3 install --upgrade pip
 RUN pip3 install -U git+https://github.com/ss1917/ops_sdk.git
-RUN pip3 install -r /var/www/do_mg/doc/requirements.txt
+RUN pip3 install -r /var/www/codo-admin/doc/requirements.txt
 
 # 6. 日志
 VOLUME /var/log/
