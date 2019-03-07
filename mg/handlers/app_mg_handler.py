@@ -140,7 +140,7 @@ class PasswordHandler(BaseHandler):
             return self.write(dict(code=-5, msg='密码复杂度必须为： 超过8位，包含数字，大小写字母 等'))
 
         if not old_password or not new_password1 or not new_password2 or not username:
-            self.write(dict(code=-1, msg='不能有空值'))
+            return self.write(dict(code=-1, msg='不能有空值'))
 
         if new_password1 != new_password2:
             return self.write(dict(code=-2, msg='新密码输入不一致'))
@@ -154,7 +154,7 @@ class PasswordHandler(BaseHandler):
         with DBContext('w', None, True) as session:
             session.query(Users).filter(Users.username == username).update({Users.password: gen_md5(new_password1)})
 
-        self.write(dict(code=0, msg='修改成功'))
+        return self.write(dict(code=0, msg='修改成功'))
 
 
 class ResetMFAHandler(BaseHandler):
