@@ -18,6 +18,8 @@ from websdk.tools import check_password
 from libs.base_handler import BaseHandler
 from websdk.db_context import DBContext
 from models.admin import Users, model_to_dict
+from websdk.consts import const
+from websdk.cache_context import cache_conn
 
 
 class UserHandler(BaseHandler):
@@ -25,7 +27,7 @@ class UserHandler(BaseHandler):
         key = self.get_argument('key', default=None, strip=True)
         value = self.get_argument('value', default=None, strip=True)
         page_size = self.get_argument('page', default=1, strip=True)
-        limit = self.get_argument('limit', default=10, strip=True)
+        limit = self.get_argument('limit', default=30, strip=True)
         limit_start = (int(page_size) - 1) * int(limit)
         user_list = []
         with DBContext('r') as session:
@@ -37,6 +39,7 @@ class UserHandler(BaseHandler):
                 count = session.query(Users).filter(Users.status != '10').count()
                 user_info = session.query(Users).filter(Users.status != '10').order_by(Users.user_id).offset(
                     limit_start).limit(int(limit))
+            all_user = session.query(Users).filter(Users.status != '10').all()
 
         for msg in user_info:
             data_dict = model_to_dict(msg)
@@ -46,6 +49,12 @@ class UserHandler(BaseHandler):
             data_dict['ctime'] = str(data_dict['ctime'])
             user_list.append(data_dict)
 
+        redis_conn = cache_conn()
+        with redis_conn.pipeline(transaction=False) as p:
+            for msg in all_user:
+                data_dict = model_to_dict(msg)
+                p.sadd(const.USERS_INFO,data_dict)
+            p.execute()
         self.write(dict(code=0, msg='获取用户成功', count=count, data=user_list))
 
     def post(self, *args, **kwargs):
