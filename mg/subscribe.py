@@ -10,6 +10,7 @@ import json
 import redis
 from websdk.db_context import DBContext
 from models.admin import OperationRecord
+from websdk.consts import const
 
 
 class RedisSubscriber:
@@ -19,11 +20,13 @@ class RedisSubscriber:
 
     def __init__(self, channel='gw', **settings):
         ### 订阅日志使用默认redis 如果有需求 请自行修改配置
-        redis_info = settings.get('redises', None).get('default', None)
-        if not settings.get('redises', None).get('default', None):
+        redis_info = settings.get(const.REDIS_CONFIG_ITEM, None).get(const.DEFAULT_RD_KEY, None)
+        if not redis_info:
             exit('not redis')
-        self.pool = redis.ConnectionPool(host=redis_info.get('host', '127.0.0.1'), port=redis_info.get('port', 6379),
-                                         db=redis_info.get('db', 7), password=redis_info.get('password', None))
+        self.pool = redis.ConnectionPool(host=redis_info.get(const.RD_HOST_KEY),
+                                         port=redis_info.get(const.RD_PORT_KEY, 6379),
+                                         db=redis_info.get(const.RD_DB_KEY, 0),
+                                         password=redis_info.get(const.RD_PASSWORD_KEY, None))
         self.conn = redis.StrictRedis(connection_pool=self.pool)
         self.channel = channel  # 定义频道名称
         self.__settings = settings

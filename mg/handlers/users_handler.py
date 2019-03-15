@@ -53,7 +53,11 @@ class UserHandler(BaseHandler):
         with redis_conn.pipeline(transaction=False) as p:
             for msg in all_user:
                 data_dict = model_to_dict(msg)
-                p.sadd(const.USERS_INFO,data_dict)
+                data_dict.pop('password')
+                data_dict.pop('google_key')
+                data_dict['last_login'] = str(data_dict['last_login'])
+                data_dict['ctime'] = str(data_dict['ctime'])
+                p.sadd(const.USERS_INFO,json.dumps(data_dict))
             p.execute()
         self.write(dict(code=0, msg='获取用户成功', count=count, data=user_list))
 
