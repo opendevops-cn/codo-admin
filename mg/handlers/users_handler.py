@@ -57,7 +57,9 @@ class UserHandler(BaseHandler):
                 data_dict.pop('google_key')
                 data_dict['last_login'] = str(data_dict['last_login'])
                 data_dict['ctime'] = str(data_dict['ctime'])
-                p.sadd(const.USERS_INFO,json.dumps(data_dict))
+                nickname_key = bytes(data_dict['nickname'] + '__contact', encoding='utf-8')
+                p.hmset(nickname_key, {"tel": data_dict["tel"], "email": data_dict["email"]})
+                p.sadd(const.USERS_INFO, json.dumps(data_dict))
             p.execute()
         self.write(dict(code=0, msg='获取用户成功', count=count, data=user_list))
 
