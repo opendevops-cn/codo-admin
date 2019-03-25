@@ -25,6 +25,7 @@ from .configs_init import configs_init
 from websdk.consts import const
 from websdk.tools import convert
 from websdk.cache_context import cache_conn
+from websdk.jwt_token import AuthToken
 
 
 class LogHandler(BaseHandler):
@@ -221,12 +222,54 @@ class ResetPasswordHandler(BaseHandler):
         return self.write(dict(code=0, msg='重置密码成功，新密码已经发送到邮箱'))
 
 
+class TokenHandler(BaseHandler):
+    ### 获取长期令牌
+    def put(self, *args, **kwargs):
+        if not self.is_superuser:
+            return self.write(dict(code=-1, msg='不是超级管理员，没有权限'))
+
+        data = json.loads(self.request.body.decode("utf-8"))
+        user_list = data.get('user_list', None)
+
+        if len(user_list) != 1:
+            return self.write(dict(code=-2, msg='一次只能选择一个用户，且不能为空'))
+
+        user_id = user_list[0]
+        with DBContext('r') as session:
+            user_info = session.query(Users).filter(Users.user_id == user_id).first()
+
+        ### 生成token
+        if user_info.superuser == '0':
+            is_superuser = True
+        else:
+            is_superuser = False
+
+        token_info = dict(user_id=user_id, username=user_info.username, nickname=user_info.nickname,
+                          is_superuser=is_superuser, exp_time=1100)
+        auth_token = AuthToken()
+        auth_key = auth_token.encode_auth_token(**token_info)
+
+        redis_conn = cache_conn()
+        configs_init('all')
+        config_info = redis_conn.hgetall(const.APP_SETTINGS)
+        config_info = convert(config_info)
+        obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST), mail_port=config_info.get(const.EMAIL_PORT),
+                       mail_user=config_info.get(const.EMAIL_HOST_USER),
+                       mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
+                       mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False)
+
+        obj.send_mail(user_info.email, '令牌，有效期三年', auth_key, subtype='plain')
+
+        return self.write(dict(code=0, msg='Token已经发送到邮箱'))
+
+
 app_mg_urls = [
     (r"/v2/app/opt_log/", LogHandler),
     (r"/register/", UserRegisterHandler),
     (r"/v2/accounts/password/", PasswordHandler),
     (r"/v2/accounts/reset_mfa/", ResetMFAHandler),
     (r"/v2/accounts/reset_pw/", ResetPasswordHandler),
+    (r"/v2/accounts/token/", TokenHandler),
     (r"/are_you_ok/", LivenessProbe),
 ]
 

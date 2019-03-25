@@ -60,7 +60,7 @@ class SendSmsHandler(BaseHandler):
 
     @gen.coroutine
     def post(self, *args, **kwargs):
-        ### 发送邮件
+        ### 发送短信
         data = json.loads(self.request.body.decode('utf-8'))
         phone = data.get('phone', None)
         msg = data.get('msg', None) # json格式 对应短信模板里设置的参数
