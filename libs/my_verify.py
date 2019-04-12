@@ -10,13 +10,21 @@ from websdk.cache_context import cache_conn
 from models.admin import UserRoles, RoleFunctions, Functions
 from websdk.db_context import DBContext
 
+
 class MyVerify:
-    def __init__(self, user_id):
+    def __init__(self, user_id, is_superuser=False):
         self.redis_conn = cache_conn()
         self.user_id = user_id
+        self.is_superuser = is_superuser
         self.method_list = ["GET", "POST", "PATCH", "DELETE", "PUT", "ALL"]
 
     def write_verify(self):
+        if self.is_superuser:
+            user_method = self.user_id + 'ALL'
+            self.redis_conn.sadd(user_method, '/')
+            self.redis_conn.expire(user_method, time=3 * 86400)
+            return '权限已经写入缓存'
+
         for method in self.method_list:
             user_method = self.user_id + method
             self.redis_conn.delete(user_method)
@@ -38,7 +46,7 @@ class MyVerify:
         my_verify = self.redis_conn.smembers(self.user_id + my_method)
         all_verify = self.redis_conn.smembers(self.user_id + 'ALL')
         ### 把uri 转化为bytes
-        my_uri =bytes(my_uri, encoding = "utf8")
+        my_uri = bytes(my_uri, encoding="utf8")
         for i in my_verify:
             is_exist = my_uri.startswith(i)
             if is_exist:

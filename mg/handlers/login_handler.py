@@ -102,7 +102,7 @@ class LoginHandler(RequestHandler):
         self.set_cookie('auth_key', auth_key, expires_days=1)
 
         ### 后端权限写入缓存
-        my_verify = MyVerify(user_id)
+        my_verify = MyVerify(user_id,is_superuser)
         my_verify.write_verify()
         ### 前端权限写入缓存
         get_user_rules(user_id)
