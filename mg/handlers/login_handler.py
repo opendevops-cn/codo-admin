@@ -22,6 +22,8 @@ from websdk.cache_context import cache_conn
 
 from websdk.tools import convert
 from ast import literal_eval
+### LDAP
+from websdk.ldap import LdapApi
 
 
 class LoginHandler(RequestHandler):
@@ -34,6 +36,7 @@ class LoginHandler(RequestHandler):
 
         if not username or not password:
             return self.write(dict(code=-1, msg='账号密码不能为空'))
+
         if is_mail(username):
             redis_conn = cache_conn()
             configs_init('all')
@@ -53,7 +56,7 @@ class LoginHandler(RequestHandler):
                         user_info = session.query(Users).filter(Users.email == email, Users.username == username,
                                                                 Users.status != '10').first()
                     if not user_info:
-                        return self.write(dict(code=-3, msg='邮箱认证通过，请根据邮箱完善用户信息', email=email))
+                        return self.write(dict(code=-3, msg='邮箱认证通过，请根据邮箱完善用户信息', username=username, email=email))
 
         else:
             with DBContext('r') as session:
@@ -61,7 +64,41 @@ class LoginHandler(RequestHandler):
                                                         Users.status != '10').first()
 
             if not user_info:
-                return self.write(dict(code=-4, msg='账号密码错误'))
+                redis_conn = cache_conn()
+                configs_init('all')
+                ldap_login = redis_conn.hget(const.APP_SETTINGS, const.LDAP_ENABLE)
+                ldap_login = convert(ldap_login)
+                if ldap_login != '1':
+                    return self.write(dict(code=-4, msg='账号密码错误'))
+
+                ### 如果开启了LDAP认证 则进行LDAP认证
+                else:
+                    ####
+                    config_info = redis_conn.hgetall(const.APP_SETTINGS)
+                    config_info = convert(config_info)
+                    ldap_ssl = True if config_info.get(const.LDAP_USE_SSL) == '1' else False
+
+                    obj = LdapApi(config_info.get(const.LDAP_SERVER_HOST), config_info.get(const.LDAP_ADMIN_DN),
+                                  config_info.get(const.LDAP_ADMIN_PASSWORD),
+                                  int(config_info.get(const.LDAP_SERVER_PORT, 389)),
+                                  ldap_ssl)
+
+                    ldap_pass_info = obj.ldap_auth(username, password, config_info.get(const.LDAP_SEARCH_BASE),
+                                                   config_info.get(const.LDAP_SEARCH_FILTER))
+
+                    if ldap_pass_info[0]:
+                        with DBContext('r') as session:
+                            if not ldap_pass_info[2]:
+                                return self.write(dict(code=-11, msg='LDAP认证成功，但是没有找到用户邮箱，请完善！'))
+                            else:
+                                user_info = session.query(Users).filter(Users.email == ldap_pass_info[2],
+                                                                        Users.username == username,
+                                                                        Users.status != '10').first()
+                            if not user_info:
+                                return self.write(dict(code=-3, msg='LDAP认证通过，完善用户信息', username=ldap_pass_info[1],
+                                                       email=ldap_pass_info[2]))
+                    else:
+                        return self.write(dict(code=-4, msg='账号密码错误'))
 
         if user_info.status != '0':
             return self.write(dict(code=-4, msg='账号被禁用'))
@@ -82,7 +119,6 @@ class LoginHandler(RequestHandler):
                 if t_otp.now() != str(dynamic):
                     return self.write(dict(code=-5, msg='MFA错误'))
 
-
         user_id = str(user_info.user_id)
         ### 生成token 并写入cookie
         token_info = dict(user_id=user_id, username=user_info.username, nickname=user_info.nickname,
@@ -102,14 +138,13 @@ class LoginHandler(RequestHandler):
         self.set_cookie('auth_key', auth_key, expires_days=1)
 
         ### 后端权限写入缓存
-        my_verify = MyVerify(user_id,is_superuser)
+        my_verify = MyVerify(user_id, is_superuser)
         my_verify.write_verify()
         ### 前端权限写入缓存
         get_user_rules(user_id)
 
         return self.write(dict(code=0, auth_key=auth_key.decode(), username=user_info.username,
-                        nickname=user_info.nickname, msg='登录成功'))
-
+                               nickname=user_info.nickname, msg='登录成功'))
 
 
 class LogoutHandler(BaseHandler):
@@ -132,6 +167,7 @@ class AuthorizationHandler(BaseHandler):
 
         data = dict(rules=dict(page=literal_eval(convert(page)), component=literal_eval(convert(component))))
         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
+
 
 # class AuthorizationHandler(BaseHandler):
 #     def get(self, *args, **kwargs):

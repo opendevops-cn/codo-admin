@@ -10,6 +10,7 @@ Desc    : 系统配置API
 import time
 import json
 from libs.base_handler import BaseHandler
+from websdk.ldap import LdapApi
 from websdk.utils import SendMail, SendSms
 from websdk.consts import const
 from websdk.tools import convert
@@ -73,6 +74,18 @@ class CheckSettingsHandler(BaseHandler):
                 return self.write(dict(code=0, msg='测试短信成功'))
             else:
                 return self.write(dict(code=-2, msg='测试短信失败{}'.format(str(query_response))))
+        elif check_key == 'LDAP':
+            ldap_ssl = True if config_info.get(const.LDAP_USE_SSL) == '1' else False
+
+            obj = LdapApi(config_info.get(const.LDAP_SERVER_HOST), config_info.get(const.LDAP_ADMIN_DN),
+                          config_info.get(const.LDAP_ADMIN_PASSWORD), int(config_info.get(const.LDAP_SERVER_PORT,389)),
+                          ldap_ssl)
+
+            if obj.ldap_server_test():
+                return self.write(dict(code=0, msg='LDAP连接测试成功'))
+            else:
+                return self.write(dict(code=-1, msg='LDAP连接测试不成功，请仔细检查配置'))
+
         else:
             return self.write(dict(code=-1, msg='未知测试项目'))
 
