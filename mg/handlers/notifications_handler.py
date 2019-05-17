@@ -7,12 +7,12 @@ Date    : 2018/11/2
 Desc    : 发送通知 API
 """
 
-### 邮件
-### 短信
 import json
+from tornado.concurrent import run_on_executor
+from concurrent.futures import ThreadPoolExecutor
 from libs.base_handler import BaseHandler
 from tornado import gen
-from websdk.utils import SendMail,SendSms
+from websdk.utils import SendMail, SendSms
 from .configs_init import configs_init
 from websdk.consts import const
 from websdk.tools import convert
@@ -23,6 +23,25 @@ class SendMailHandler(BaseHandler):
     @gen.coroutine
     def get(self, *args, **kwargs):
         return self.write(dict(code=-1, msg='Hello, SendMail, Please use POST SendMail!'))
+
+    _thread_pool = ThreadPoolExecutor(5)
+
+    @run_on_executor(executor='_thread_pool')
+    def send_mail_pool(self, *args_list):
+        send_list = args_list[0]
+        config_info = args_list[1]
+        try:
+            obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST),
+                           mail_port=config_info.get(const.EMAIL_PORT),
+                           mail_user=config_info.get(const.EMAIL_HOST_USER),
+                           mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
+                           mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False)
+
+            obj.send_mail(send_list[0], send_list[1], send_list[2], subtype=send_list[3], att=send_list[4])
+            return dict(code=0, msg='邮件发送成功')
+
+        except Exception as e:
+            return dict(code=-1, msg='邮件发送失败 {}'.format(str(e)))
 
     @gen.coroutine
     def post(self, *args, **kwargs):
@@ -40,20 +59,35 @@ class SendMailHandler(BaseHandler):
         configs_init('all')
         config_info = redis_conn.hgetall(const.APP_SETTINGS)
         config_info = convert(config_info)
-        try:
-            obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST), mail_port=config_info.get(const.EMAIL_PORT),
-                           mail_user=config_info.get(const.EMAIL_HOST_USER),
-                           mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
-                           mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False)
-
-            obj.send_mail(to_list, subject, content, subtype=subtype, att=att)
-            return self.write(dict(code=0, msg='邮件发送成功'))
-
-        except Exception as e:
-            return self.write(dict(code=-1, msg='邮件发送失败 {}'.format(str(e))))
+        send_list = [to_list, subject, content, subtype, att]
+        res = yield self.send_mail_pool(send_list, config_info)
+        return self.write(res)
 
 
 class SendSmsHandler(BaseHandler):
+    _thread_pool = ThreadPoolExecutor(5)
+
+    @run_on_executor(executor='_thread_pool')
+    def send_sms_pool(self, *args_list):
+        send_list = args_list[0]
+        config_info = args_list[1]
+        try:
+            obj = SendSms(config_info.get(const.SMS_REGION), config_info.get(const.SMS_DOMAIN),
+                          config_info.get(const.SMS_PRODUCT_NAME), config_info.get(const.SMS_ACCESS_KEY_ID),
+                          config_info.get(const.SMS_ACCESS_KEY_SECRET))
+
+            params = json.dumps(send_list[1])
+            sms_response = obj.send_sms(send_list[0], template_param=params, sign_name=send_list[2],
+                                        template_code=send_list[3])
+            sms_response = json.loads(sms_response.decode('utf-8'))
+            if sms_response.get("Message") == "OK":
+                return dict(code=0, msg='短信发送成功')
+            else:
+                return dict(code=-2, msg='短信发送失败{}'.format(str(sms_response)))
+
+        except Exception as e:
+            return dict(code=-1, msg='短信发送失败 {}'.format(str(e)))
+
     @gen.coroutine
     def get(self, *args, **kwargs):
         return self.write(dict(code=-1, msg='Hello, Send sms, Please use POST !'))
@@ -63,7 +97,7 @@ class SendSmsHandler(BaseHandler):
         ### 发送短信
         data = json.loads(self.request.body.decode('utf-8'))
         phone = data.get('phone', None)
-        msg = data.get('msg', None) # json格式 对应短信模板里设置的参数
+        msg = data.get('msg', None)  # json格式 对应短信模板里设置的参数
         template_code = data.get('template_code', None)
         sign_name = data.get('sign_name', 'OPS')
         redis_conn = cache_conn()
@@ -73,21 +107,10 @@ class SendSmsHandler(BaseHandler):
         configs_init('all')
         config_info = redis_conn.hgetall(const.APP_SETTINGS)
         config_info = convert(config_info)
-        try:
-            obj = SendSms(config_info.get(const.SMS_REGION), config_info.get(const.SMS_DOMAIN),
-                           config_info.get(const.SMS_PRODUCT_NAME), config_info.get(const.SMS_ACCESS_KEY_ID),
-                           config_info.get(const.SMS_ACCESS_KEY_SECRET))
-
-            params = json.dumps(msg)
-            sms_response = obj.send_sms(phone, template_param=params, sign_name=sign_name, template_code=template_code)
-            sms_response = json.loads(sms_response.decode('utf-8'))
-            if sms_response.get("Message") == "OK":
-                return self.write(dict(code=0, msg='短信发送成功'))
-            else:
-                return self.write(dict(code=-2, msg='短信发送失败{}'.format(str(sms_response))))
-
-        except Exception as e:
-            return self.write(dict(code=-1, msg='短信发送失败 {}'.format(str(e))))
+        #
+        send_list = [phone, msg, sign_name, template_code]
+        res = yield self.send_sms_pool(send_list, config_info)
+        return self.write(res)
 
 
 notifications_urls = [

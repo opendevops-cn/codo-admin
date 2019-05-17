@@ -9,6 +9,7 @@ Desc    : 系统配置API
 
 import time
 import json
+from tornado import gen
 from libs.base_handler import BaseHandler
 from websdk.ldap import LdapApi
 from websdk.utils import SendMail, SendSms
@@ -23,6 +24,7 @@ from websdk.db_context import DBContext
 
 
 class AppSettingsHandler(BaseHandler):
+    @gen.coroutine
     def get(self, setting_key):
         return_code = configs_init(setting_key)
         return self.write(return_code)
@@ -42,6 +44,8 @@ class AppSettingsHandler(BaseHandler):
 
 
 class CheckSettingsHandler(BaseHandler):
+
+    @gen.coroutine
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode('utf-8'))
         check_key = data.get('check_key')
@@ -55,10 +59,11 @@ class CheckSettingsHandler(BaseHandler):
             with DBContext('r') as session:
                 mail_to = session.query(Users.email).filter(Users.user_id == user_id).first()
 
-            obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST), mail_port=config_info.get(const.EMAIL_PORT),
-                           mail_user=config_info.get(const.EMAIL_HOST_USER),
-                           mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
-                           mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False)
+            obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST),
+                                mail_port=config_info.get(const.EMAIL_PORT),
+                                mail_user=config_info.get(const.EMAIL_HOST_USER),
+                                mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
+                                mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False)
 
             obj.send_mail(mail_to[0], 'OPS测试邮件', '测试发送邮件成功', subtype='plain')
             return self.write(dict(code=0, msg='测试邮件已经发送'))
@@ -78,7 +83,7 @@ class CheckSettingsHandler(BaseHandler):
             ldap_ssl = True if config_info.get(const.LDAP_USE_SSL) == '1' else False
 
             obj = LdapApi(config_info.get(const.LDAP_SERVER_HOST), config_info.get(const.LDAP_ADMIN_DN),
-                          config_info.get(const.LDAP_ADMIN_PASSWORD), int(config_info.get(const.LDAP_SERVER_PORT,389)),
+                          config_info.get(const.LDAP_ADMIN_PASSWORD), int(config_info.get(const.LDAP_SERVER_PORT, 389)),
                           ldap_ssl)
 
             if obj.ldap_server_test():

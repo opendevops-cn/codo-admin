@@ -292,8 +292,21 @@
 ![](./doc/images/system_log.png)
 
 
-
-
+#### 发送短信API
+> 仅支持阿里大鱼
+- 接口地址 `/v2/notifications/sms/`
+- 请求方式 `POST`   `contentType:"application/json"`
+- body数据
+```json
+{"phone": "十一位手机号多个以逗号分割", "msg": {"msg": "短信内容"},"sign_name": "签名","template_code": "SMS_136397941111"}
+```
+#### 发送邮件API
+- 接口地址 `/v2/notifications/mail/`
+- 请求方式 `POST`   `contentType:"application/json"`
+- body数据
+```json
+{"to_list": "1111@qq.com, 2222@qq.com", "subject": "标题","content": "内容"}
+```
 
 
 ## License
