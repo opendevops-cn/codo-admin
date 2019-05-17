@@ -261,8 +261,11 @@ class TokenHandler(BaseHandler):
         with DBContext('w', None, True) as session:
             mail_to = session.query(Users.email).filter(Users.user_id == self.get_current_id()).first()
 
-        obj.send_mail(mail_to[0], '令牌，有效期三年', auth_key.decode(), subtype='plain')
-        obj.send_mail(user_info.email, '令牌，有效期三年', auth_key.decode(), subtype='plain')
+        if mail_to[0] == user_info.email:
+            obj.send_mail(mail_to[0], '令牌，有效期三年', auth_key.decode(), subtype='plain')
+        else:
+            obj.send_mail(mail_to[0], '令牌，有效期三年', auth_key.decode(), subtype='plain')
+            obj.send_mail(user_info.email, '令牌，有效期三年', auth_key.decode(), subtype='plain')
         return self.write(dict(code=0, msg='Token已经发送到邮箱', data=auth_key.decode()))
 
 
