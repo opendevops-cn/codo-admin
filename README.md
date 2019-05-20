@@ -308,6 +308,56 @@
 {"to_list": "1111@qq.com, 2222@qq.com", "subject": "标题","content": "内容"}
 ```
 
+#### 获取TOKEN 
+
+> 本系统使用token进行身份验证，当用户需要API进行访问的时候就需要获取token，并把token放入cookie里或者 访问的url参数里
+
+- 从用户管理 > 菜单组件里面找到 get_token_btn  这个代表获取token的按钮 要存在并且启用
+
+
+
+- 从用户管理 >角色管理里面找到你要赋值的角色，点击组件把get_token_btn  添加进去
+
+![](./doc/images/tianjiazujian.png)
+
+
+
+- 从用户管理 > 用户列表 会看到这个长期token的按钮，如果你是超级管理员 你就可以选中用户点击，然后系统会通过邮件把这个用户的token 发送至当前用户以及被选中用户的邮箱，token 有效期为三年。强烈建议如果使用token进行操作的时候  使用单独用户，防止人员变动造成token不可用，要进行精确权限控制，做好备注，且不要给此用户菜单以及组件权限。
+
+![](./doc/images/huoqulingpaixinxi.png)
+
+- 使用token 向 CODO 服务 API 提交安全的 REST 或 HTTP 查询协议请求。为了您的安全，请不要与任何人分享您的密钥。作为最佳做法，我们建议经常更换密钥 
+
+- 简单python示例，当然你之前一定会检查这个token是否对这个接口有权限，对吧！
+
+```python
+import requests
+import json
+
+auth_key= '这里就是你的token'
+url = 'https://xxx.xxxx.cn/api/kerrigan/v1/conf/publish/config/?project_code=shenshuo&environment=dev&service=nginx&filename=demo.conf'
+### 使用 cookie 传递
+try:
+    res = requests.get(url, cookies=dict(auth_key=auth_key))
+    ret = json.loads(res.content)
+    if ret['code'] == 0: return ret['data']
+except Exception as e:
+    print('[Error:] 接口连接失败，错误信息：{}'.format(e))
+    exit(-1)
+
+### 使用url 传递
+try:
+    _params = {'这里是参数名': '这里是参数值', 'auth_key': auth_key}
+    res = requests.get(url, params=_params)
+    ret = json.loads(res.content)
+    if ret['code'] == 0: return ret['data']
+except Exception as e:
+    print('[Error:] 接口连接失败，错误信息：{}'.format(e))
+    exit(-2)
+
+```
+
+  
 
 ## License
 
