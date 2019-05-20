@@ -6,11 +6,11 @@
 [在线访问](http://demo.opendevops.cn/)
 
 ### 简介
-&emsp;&emsp; do_mg是基于tornado框架 restful风格的API 实现后台管理，搭配使用admin-front前端([iView](https://www.iviewui.com)+ [vue](https://cn.vuejs.org/))组成的一套后台用户 权限以及系统管理的解决方案（提供登录，注册 密码修改 鉴权 用户管理 角色管理 权限管理 前端组件管理 前端路由管理 通知服务API 系统基础信息接口）
-本项目为open-ops开源项目提供后台支持，也可以基于此项目基础项目开发自己的站点，更多基础功能还在不断开发中，如果想要查看更新动态，你可以到[更新日志](https://github.com/ss1917/do_mg/releases)查看最新更新，如果你是新手想快速部署，你可以去[部署文档](https://github.com/ss1917/do_mg/tree/master/doc/deployment.md) 查看  
+&emsp;&emsp;  本应用是基于tornado框架 restful风格的API 实现后台管理，搭配使用admin-front前端([iView](https://www.iviewui.com)+ [vue](https://cn.vuejs.org/))组成的一套后台用户 权限以及系统管理的解决方案（提供登录，注册 密码修改 鉴权 用户管理 角色管理 权限管理 前端组件管理 前端路由管理 通知服务API 系统基础信息接口）
+本项目为CODO开源项目提供后台支持，也可以基于此项目基础项目开发自己的站点，更多基础功能还在不断开发中，如果想要查看更新动态，你可以到[更新日志](https://github.com/ss1917/do_mg/releases)查看最新更新，如果你是新手想快速部署，你可以去[部署文档](https://github.com/ss1917/do_mg/tree/master/doc/deployment.md) 查看  
 ### 功能
 
-- 登录/登出 （支持谷歌动态码）
+- 登录/登出 （支持谷歌动态码/支持邮箱登录/支持LDAP登录）
 
 - 密码修改
 
@@ -98,6 +98,7 @@
 - 关闭用户
 - 重置密码
 - 重置MFA（Google Authenticator）
+- 获取令牌
 
 **展示界面**
 
@@ -324,7 +325,7 @@
 
 - 从用户管理 > 用户列表 会看到这个长期token的按钮，如果你是超级管理员 你就可以选中用户点击，然后系统会通过邮件把这个用户的token 发送至当前用户以及被选中用户的邮箱，token 有效期为三年。强烈建议如果使用token进行操作的时候  使用单独用户，防止人员变动造成token不可用，要进行精确权限控制，做好备注，且不要给此用户菜单以及组件权限。
 
-![](./doc/images/huoqulingpaixinxi.png)
+![](./doc/images/get_token.png)
 
 - 使用token 向 CODO 服务 API 提交安全的 REST 或 HTTP 查询协议请求。为了您的安全，请不要与任何人分享您的密钥。作为最佳做法，我们建议经常更换密钥 
 
