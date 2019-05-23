@@ -3,7 +3,6 @@ do_mg:
   image: do_mg_image
   volumes:
     - /var/log/supervisor/:/var/log/supervisor/
-    - /var/www/do_mg/:/var/www/do_mg/
     - /sys/fs/cgroup:/sys/fs/cgroup
   ports:
     - "8010:80"
