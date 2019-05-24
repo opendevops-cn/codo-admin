@@ -1,7 +1,7 @@
 ## 后端管理平台
 [更新日志](https://github.com/ss1917/do_mg/releases)
 
-[部署文档](https://github.com/ss1917/do_mg/tree/master/doc/deployment.md)
+[部署文档](http://docs.opendevops.cn/zh/latest/codo-admin.html)
 
 [在线访问](http://demo.opendevops.cn/)
 
@@ -359,7 +359,7 @@ except Exception as e:
 ```
 
 #### 部署文档
-[BIND 搭建](./doc/codo-admin.md)
+[项目部署](./doc/codo-admin.md)
 
 ## License
 
