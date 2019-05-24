@@ -205,9 +205,16 @@ class AuthorizationHandler(BaseHandler):
 #         print(data)
 #         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
 
-def get_user_rules(user_id):
+def get_user_rules(user_id,is_superuser=False):
     page_data = {}
     component_data = {}
+
+    if is_superuser:
+        page_data['all'] = True
+        component_data['all'] = True
+        redis_conn = cache_conn()
+        redis_conn.hmset("{}_rules".format(user_id), dict(page=page_data, component=component_data))
+
     with DBContext('r') as session:
         this_menus = session.query(Menus.menu_name
                                    ).outerjoin(RoleMenus, Menus.menu_id == RoleMenus.menu_id).outerjoin(
