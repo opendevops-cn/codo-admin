@@ -358,7 +358,8 @@ except Exception as e:
 
 ```
 
-  
+#### 部署文档
+[BIND 搭建](./doc/codo-admin.md)
 
 ## License
 
