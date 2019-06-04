@@ -13,15 +13,15 @@ RUN yum update -y && yum install epel-release -y && yum update -y && yum install
 RUN wget https://www.python.org/ftp/python/3.6.6/Python-3.6.6.tar.xz
 RUN xz -d Python-3.6.6.tar.xz && tar xvf Python-3.6.6.tar && cd Python-3.6.6 && ./configure && make && make install
 
-# 3. 安装yum依赖
+# 3. 安装pip依赖
+RUN pip3 install --upgrade pip
+RUN pip3 install -U git+https://github.com/ss1917/ops_sdk.git
 
 # 4. 复制代码
 RUN mkdir -p /var/www/
 ADD . /var/www/codo-admin/
 
 # 5. 安装pip依赖
-RUN pip3 install --upgrade pip
-RUN pip3 install -U git+https://github.com/ss1917/ops_sdk.git
 RUN pip3 install -r /var/www/codo-admin/doc/requirements.txt
 
 # 6. 日志

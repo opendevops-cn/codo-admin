@@ -79,11 +79,19 @@ class UserHandler(BaseHandler):
         with DBContext('r') as session:
             user_info1 = session.query(Users).filter(Users.username == username).first()
             user_info2 = session.query(Users).filter(Users.tel == tel).first()
+            user_info3 = session.query(Users).filter(Users.email == email).first()
+            user_info4 = session.query(Users).filter(Users.nickname == nickname).first()
         if user_info1:
             return self.write(dict(code=-2, msg='用户名已注册'))
 
         if user_info2:
             return self.write(dict(code=-3, msg='手机号已注册'))
+
+        if user_info3:
+            return self.write(dict(code=-4, msg='邮箱已注册'))
+
+        if user_info4:
+            return self.write(dict(code=-4, msg='昵称已注册'))
 
         if not password:
             password = '7d491c440ba46ca20fde0c5be1377aec'
