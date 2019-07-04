@@ -39,7 +39,10 @@ class UserHandler(BaseHandler):
                 count = session.query(Users).filter(Users.status != '10').count()
                 user_info = session.query(Users).filter(Users.status != '10').order_by(Users.user_id).offset(
                     limit_start).limit(int(limit))
+
             all_user = session.query(Users).filter(Users.status != '10').all()
+            if int(limit) > 200:
+                user_info = all_user
 
         for msg in user_info:
             data_dict = model_to_dict(msg)
@@ -132,13 +135,16 @@ class UserHandler(BaseHandler):
         if not key or not value or not user_id:
             return self.write(dict(code=-1, msg='不能为空'))
 
-        with DBContext('w', None, True) as session:
-            session.query(Users).filter(Users.user_id == user_id).update({key: value})
-            session.commit()
+        try:
+            with DBContext('w', None, True) as session:
+                session.query(Users).filter(Users.user_id == user_id).update({key: value})
+        except Exception as e:
+            return self.write(dict(code=-2, msg='修改失败，请检查数据是否合法或者重复'))
+
         self.write(dict(code=0, msg='编辑成功'))
 
     def patch(self, *args, **kwargs):
-        '''禁用、启用'''
+        """禁用、启用"""
         data = json.loads(self.request.body.decode("utf-8"))
         user_id = str(data.get('user_id', None))
         msg = '用户不存在'
@@ -151,6 +157,7 @@ class UserHandler(BaseHandler):
         if not user_status:
             return self.write(dict(code=-2, msg=msg))
 
+        new_status = '20'
         if user_status[0] == '0':
             msg = '用户禁用成功'
             new_status = '20'
