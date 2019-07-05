@@ -15,7 +15,7 @@ from libs.my_verify import MyVerify
 from websdk.utils import mail_login
 import pyotp
 from websdk.db_context import DBContext
-from models.admin import Users, Components, RolesComponents, Menus, RoleMenus, UserRoles,model_to_dict
+from models.admin import Users, Components, RolesComponents, Menus, RoleMenus, UserRoles
 from .configs_init import configs_init
 from websdk.consts import const
 from websdk.cache_context import cache_conn
