@@ -15,7 +15,7 @@ from libs.my_verify import MyVerify
 from websdk.utils import mail_login
 import pyotp
 from websdk.db_context import DBContext
-from models.admin import Users, Components, RolesComponents, Menus, RoleMenus, UserRoles
+from models.admin import Users, Components, RolesComponents, Menus, RoleMenus, UserRoles,model_to_dict
 from .configs_init import configs_init
 from websdk.consts import const
 from websdk.cache_context import cache_conn
@@ -210,27 +210,31 @@ def get_user_rules(user_id, is_superuser=False):
     component_data = {}
 
     with DBContext('r') as session:
-        this_menus = session.query(Menus.menu_name
-                                   ).outerjoin(RoleMenus, Menus.menu_id == RoleMenus.menu_id).outerjoin(
-            UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
 
-        this_components = session.query(Components.component_name
-                                        ).outerjoin(RolesComponents,
-                                                    Components.comp_id == RolesComponents.comp_id).outerjoin(
-            UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
+        if is_superuser:
+            components_info = session.query(Components.component_name).filter(Components.status != '10').all()
+            page_data['all'] = True
+            component_data['all'] = True
+            for msg in components_info:
+                component_data[msg[0]] = True
 
-    for p in this_menus:
-        page_data[p[0]] = True
-    for c in this_components:
-        component_data[c[0]] = True
+        else:
+            this_menus = session.query(Menus.menu_name).outerjoin(RoleMenus,Menus.menu_id == RoleMenus.menu_id).outerjoin(
+                UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
 
-    ## 插入一个没有权限的
-    if is_superuser:
-        page_data['all'] = True
-        component_data['all'] = True
-    else:
-        page_data['all'] = False
-        component_data['all'] = False
+            this_components = session.query(Components.component_name).outerjoin(RolesComponents,
+                                                         Components.comp_id == RolesComponents.comp_id).outerjoin(
+                UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
+
+            ## 如果不是超级用户 插入一个没有权限的
+            page_data['all'] = False
+            component_data['all'] = False
+            for p in this_menus:
+                page_data[p[0]] = True
+
+            for c in this_components:
+                component_data[c[0]] = True
+
     redis_conn = cache_conn()
     redis_conn.hmset("{}_rules".format(user_id), dict(page=page_data, component=component_data))
 
