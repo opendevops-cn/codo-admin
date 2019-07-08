@@ -169,42 +169,6 @@ class AuthorizationHandler(BaseHandler):
         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
 
 
-# class AuthorizationHandler(BaseHandler):
-#     def get(self, *args, **kwargs):
-#         user_id = self.get_current_id()
-#
-#         redis_conn = cache_conn()
-#         page = redis_conn.hget("{}_rules".format(user_id), 'page')
-#         component = redis_conn.hget("{}_rules".format(user_id), 'component')
-#
-#         data1 = dict(rules=dict(page=convert(page), component=convert(component)))
-#         print(data1)
-#
-#         page_data = {}
-#         component_data = {}
-#         with DBContext('r') as session:
-#             this_menus = session.query(Menus.menu_name
-#                                        ).outerjoin(RoleMenus, Menus.menu_id == RoleMenus.menu_id).outerjoin(
-#                 UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
-#
-#             this_components = session.query(Components.component_name
-#                                             ).outerjoin(RolesComponents,
-#                                                         Components.comp_id == RolesComponents.comp_id).outerjoin(
-#                 UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
-#
-#         for p in this_menus:
-#             page_data[p[0]] = True
-#         for c in this_components:
-#             component_data[c[0]] = True
-#
-#         ## 插入一个没有权限的
-#         page_data['all'] = False
-#         component_data['all'] = False
-#
-#         data = dict(rules=dict(page=page_data, component=component_data))
-#         print(data)
-#         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
-
 def get_user_rules(user_id, is_superuser=False):
     page_data = {}
     component_data = {}
@@ -212,19 +176,25 @@ def get_user_rules(user_id, is_superuser=False):
     with DBContext('r') as session:
 
         if is_superuser:
-            components_info = session.query(Components.component_name).filter(Components.status != '10').all()
+            components_info = session.query(Components.component_name).filter(Components.status == '0').all()
             page_data['all'] = True
             component_data['all'] = True
             for msg in components_info:
                 component_data[msg[0]] = True
 
         else:
-            this_menus = session.query(Menus.menu_name).outerjoin(RoleMenus,Menus.menu_id == RoleMenus.menu_id).outerjoin(
-                UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
+            this_menus = session.query(Menus.menu_name).outerjoin(RoleMenus,
+                                                                  Menus.menu_id == RoleMenus.menu_id).outerjoin(
+                UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id,
+                                                                          UserRoles.status == '0',
+                                                                          Menus.status == '0').all()
 
             this_components = session.query(Components.component_name).outerjoin(RolesComponents,
-                                                         Components.comp_id == RolesComponents.comp_id).outerjoin(
-                UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id).all()
+                                                                                 Components.comp_id == RolesComponents.comp_id
+                                                                                 ).outerjoin(
+                UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id,
+                                                                                UserRoles.status == '0',
+                                                                                Components.status == '0').all()
 
             ## 如果不是超级用户 插入一个没有权限的
             page_data['all'] = False
