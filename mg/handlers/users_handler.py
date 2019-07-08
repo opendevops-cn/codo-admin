@@ -157,7 +157,6 @@ class UserHandler(BaseHandler):
         if not user_status:
             return self.write(dict(code=-2, msg=msg))
 
-        new_status = '20'
         if user_status[0] == '0':
             msg = '用户禁用成功'
             new_status = '20'
@@ -165,9 +164,11 @@ class UserHandler(BaseHandler):
         elif user_status[0] == '20':
             msg = '用户启用成功'
             new_status = '0'
+        else:
+            new_status = '10'
 
         with DBContext('w', None, True) as session:
-            session.query(Users).filter(Users.user_id == user_id, Users.status != 10).update({Users.status: new_status})
+            session.query(Users).filter(Users.user_id == user_id, Users.status != '10').update({Users.status: new_status})
 
         return self.write(dict(code=0, msg=msg))
 

@@ -96,7 +96,7 @@ class RoleHandler(BaseHandler):
             return self.write(dict(code=-1, msg='不能为空'))
 
         with DBContext('r') as session:
-            role_status = session.query(Roles.status).filter(Roles.role_id == role_id, Roles.status != 10).first()
+            role_status = session.query(Roles.status).filter(Roles.role_id == role_id, Roles.status != '10').first()
         if not role_status:
             return self.write(dict(code=-2, msg=msg))
 
@@ -107,9 +107,13 @@ class RoleHandler(BaseHandler):
         elif role_status[0] == '20':
             msg = '启用成功'
             new_status = '0'
+        else:
+            msg = '状态不符合预期，删除'
+            new_status = '10'
 
         with DBContext('w', None, True) as session:
-            session.query(Roles).filter(Roles.role_id == role_id, Roles.status != 10).update({Roles.status: new_status})
+            session.query(Roles).filter(Roles.role_id == role_id, Roles.status != '10').update({Roles.status: new_status})
+            session.query(UserRoles).filter(UserRoles.role_id == role_id).update({UserRoles.status: new_status})
 
         self.write(dict(code=0, msg=msg))
 
