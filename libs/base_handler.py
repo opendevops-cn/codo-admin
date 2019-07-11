@@ -54,7 +54,7 @@ class BaseHandler(SDKBaseHandler):
                 self.set_secure_cookie("user_id", self.user_id)
                 self.set_secure_cookie("nickname", self.nickname)
                 self.set_secure_cookie("username", self.username)
-                self.set_secure_cookie("email", self.email)
+                self.set_secure_cookie("email", str(self.email))
 
         self.is_superuser = self.is_super
         ## 此处为示例， 如果通过API给个鉴权，则注释
