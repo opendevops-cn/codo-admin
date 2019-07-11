@@ -168,13 +168,56 @@ class UserHandler(BaseHandler):
             new_status = '10'
 
         with DBContext('w', None, True) as session:
-            session.query(Users).filter(Users.user_id == user_id, Users.status != '10').update({Users.status: new_status})
+            session.query(Users).filter(Users.user_id == user_id, Users.status != '10').update(
+                {Users.status: new_status})
 
         return self.write(dict(code=0, msg=msg))
 
 
+class UserTreeHandler(BaseHandler):
+    def get(self, *args, **kwargs):
+        user_list = []
+        with DBContext('r') as session:
+            user_info = session.query(Users).filter(Users.status == '0').all()
+
+        for msg in user_info:
+            data_dict = model_to_dict(msg)
+            user_list.append(data_dict)
+
+        _tree = [{"expand": True, "disableCheckbox": True, "title": "all", "children": []}]
+
+        if user_list:
+            tmp_tree = {
+                "department": {},
+                "nickname": {},
+            }
+
+            for t in user_list:
+                department, nickname = t["department"], t['nickname']
+
+                # 因为是第一层所以没有parent
+                tmp_tree["department"][department] = {
+                    "expand": False, "disableCheckbox": True, "title": department, "parent": "all", "children": [],
+                }
+
+                tmp_tree["nickname"][department + "|" + nickname] = {
+                    "title": nickname, "parent": department, "department": department
+                }
+
+            for tmp_group in tmp_tree["nickname"].values():
+                tmp_tree["department"][tmp_group["parent"]]["children"].append(tmp_group)
+
+            for tmp_git in tmp_tree["department"].values():
+                _tree[0]["children"].append(tmp_git)
+
+            return self.write(dict(code=0, msg='获取用户Tree成功', data=_tree))
+        else:
+            return self.write(dict(code=0, msg='获取用户Tree失败', data=_tree))
+
+
 user_mg_urls = [
     (r"/v2/accounts/user/", UserHandler),
+    (r"/v2/accounts/user/tree/", UserTreeHandler),
 ]
 
 if __name__ == "__main__":
