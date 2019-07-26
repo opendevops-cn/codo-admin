@@ -12,10 +12,7 @@ from .my_verify import MyVerify
 class BaseHandler(SDKBaseHandler):
     def __init__(self, *args, **kwargs):
         self.new_csrf_key = str(shortuuid.uuid())
-        self.user_id = None
-        self.username = None
-        self.nickname = None
-        self.is_super = False
+        self.user_id, self.username, self.nickname, self.email, self.is_super = None, None, None, None, False
         self.is_superuser = self.is_super
 
         super(BaseHandler, self).__init__(*args, **kwargs)
@@ -30,7 +27,7 @@ class BaseHandler(SDKBaseHandler):
             result = cache.get(csrf_key, private=False, pipeline=pipeline)
             cache.delete(csrf_key, private=False, pipeline=pipeline)
             if result != '1':
-                raise HTTPError(400, 'csrf error')
+                raise HTTPError(402, 'csrf error')
 
         cache.set(self.new_csrf_key, 1, expire=1800, private=False)
         self.set_cookie('csrf_key', self.new_csrf_key)
@@ -47,6 +44,7 @@ class BaseHandler(SDKBaseHandler):
             self.user_id = user_info.get('user_id', None)
             self.username = user_info.get('username', None)
             self.nickname = user_info.get('nickname', None)
+            self.email = user_info.get('email', None)
             self.is_super = user_info.get('is_superuser', False)
 
             if not self.user_id:
@@ -56,6 +54,7 @@ class BaseHandler(SDKBaseHandler):
                 self.set_secure_cookie("user_id", self.user_id)
                 self.set_secure_cookie("nickname", self.nickname)
                 self.set_secure_cookie("username", self.username)
+                self.set_secure_cookie("email", str(self.email))
 
         self.is_superuser = self.is_super
         ## 此处为示例， 如果通过API给个鉴权，则注释

@@ -53,7 +53,7 @@ class Users(Base):
     google_key = Column('google_key', String(80))  ### 谷歌认证秘钥
     superuser = Column('superuser', String(5), default='10')  ### 超级用户  0代表超级用户
     status = Column('status', String(5), default='0')
-    last_ip = Column('last_ip', String(18), default='')
+    last_ip = Column('last_ip', String(20), default='')
     last_login = Column('last_login', DateTime(), default=datetime.now, onupdate=datetime.now)
     ctime = Column('ctime', DateTime(), default=datetime.now)
 

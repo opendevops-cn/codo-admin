@@ -122,7 +122,7 @@ class LoginHandler(RequestHandler):
         user_id = str(user_info.user_id)
         ### 生成token 并写入cookie
         token_info = dict(user_id=user_id, username=user_info.username, nickname=user_info.nickname,
-                          is_superuser=is_superuser)
+                          email=user_info.email, is_superuser=is_superuser)
         auth_token = AuthToken()
         auth_key = auth_token.encode_auth_token(**token_info)
         login_ip_list = self.request.headers.get("X-Forwarded-For")
