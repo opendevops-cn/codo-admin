@@ -60,10 +60,11 @@ class CheckSettingsHandler(BaseHandler):
                 mail_to = session.query(Users.email).filter(Users.user_id == user_id).first()
 
             obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST),
-                                mail_port=config_info.get(const.EMAIL_PORT),
-                                mail_user=config_info.get(const.EMAIL_HOST_USER),
-                                mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
-                                mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False)
+                           mail_port=config_info.get(const.EMAIL_PORT),
+                           mail_user=config_info.get(const.EMAIL_HOST_USER),
+                           mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
+                           mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False,
+                           mail_tls=True if config_info.get(const.EMAIL_USE_TLS) == '1' else False)
 
             obj.send_mail(mail_to[0], 'OPS测试邮件', '测试发送邮件成功', subtype='plain')
             return self.write(dict(code=0, msg='测试邮件已经发送'))
