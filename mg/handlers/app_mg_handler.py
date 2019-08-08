@@ -119,7 +119,8 @@ class UserRegisterHandler(RequestHandler):
         obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST), mail_port=config_info.get(const.EMAIL_PORT),
                        mail_user=config_info.get(const.EMAIL_HOST_USER),
                        mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
-                       mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False)
+                       mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False,
+                       mail_tls=True if config_info.get(const.EMAIL_USE_TLS) == '1' else False)
 
         with DBContext('w', None, True) as session:
             session.add(Users(username=username, password=password, nickname=nickname, department=department, tel=tel,
@@ -176,7 +177,8 @@ class ResetMFAHandler(BaseHandler):
         obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST), mail_port=config_info.get(const.EMAIL_PORT),
                        mail_user=config_info.get(const.EMAIL_HOST_USER),
                        mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
-                       mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False)
+                       mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False,
+                       mail_tls=True if config_info.get(const.EMAIL_USE_TLS) == '1' else False)
 
         with DBContext('w', None, True) as session:
             for user_id in user_list:
