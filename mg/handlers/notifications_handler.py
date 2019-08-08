@@ -35,7 +35,8 @@ class SendMailHandler(BaseHandler):
                            mail_port=config_info.get(const.EMAIL_PORT),
                            mail_user=config_info.get(const.EMAIL_HOST_USER),
                            mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
-                           mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False)
+                           mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False,
+                           mail_tls=True if config_info.get(const.EMAIL_USE_TLS) == '1' else False)
 
             obj.send_mail(send_list[0], send_list[1], send_list[2], subtype=send_list[3], att=send_list[4])
             return dict(code=0, msg='邮件发送成功')
