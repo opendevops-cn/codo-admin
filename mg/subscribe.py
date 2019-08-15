@@ -48,9 +48,10 @@ class RedisSubscriber:
                             login_ip = data.get('login_ip').split(',')[0]
                         else:
                             login_ip = ''
+                        uri = data.get('uri').split('?')[0] if len(data.get('uri').split('?')) > 1 else data.get('uri')
                         session.add(OperationRecord(username=data.get('username'), nickname=data.get('nickname'),
-                                                    login_ip=login_ip, method=data.get('method'),
-                                                    uri=data.get('uri'), data=body_data, ctime=data.get('time')))
+                                                    login_ip=login_ip, method=data.get('method'),uri=uri,
+                                                    data=body_data, ctime=data.get('time')))
                         session.commit()
                     if item['data'] == 'over':
                         break
