@@ -7,7 +7,7 @@ role   : 权限鉴定类
 """
 
 from websdk.cache_context import cache_conn
-from models.admin import UserRoles, RoleFunctions, Functions
+from models.admin import Users, UserRoles, RoleFunctions, Functions
 from websdk.db_context import DBContext
 
 
@@ -19,11 +19,18 @@ class MyVerify:
         self.method_list = ["GET", "POST", "PATCH", "DELETE", "PUT", "ALL"]
 
     def write_verify(self):
+        ### 再确认一次是否是超级用户
         if self.is_superuser:
-            user_method = self.user_id + 'ALL'
-            self.redis_conn.sadd(user_method, '/')
-            self.redis_conn.expire(user_method, time=3 * 86400)
-            return '权限已经写入缓存'
+            with DBContext('r') as session:
+                is_super = session.query(Users.superuser).filter(Users.user_id == self.user_id).first()
+            if is_super:
+                if is_super[0] == '0':
+                    user_method = self.user_id + 'ALL'
+                    self.redis_conn.sadd(user_method, '/')
+                    self.redis_conn.expire(user_method, time=3 * 86400)
+                    return '权限已经写入缓存'
+                else:
+                    self.is_superuser = False
 
         for method in self.method_list:
             user_method = self.user_id + method

@@ -87,6 +87,9 @@ class ComponentsHandler(BaseHandler):
         elif comp_status[0] == '20':
             msg = '启用成功'
             new_status = '0'
+        else:
+            msg = '状态不符合预期，删除'
+            new_status = '10'
 
         with DBContext('w', None, True) as session:
             session.query(Components).filter(Components.comp_id == comp_id, Components.status != 10).update(
@@ -102,6 +105,7 @@ class ComponentsHandler(BaseHandler):
 
         with DBContext('w', None, True) as session:
             session.query(Components).filter(Components.comp_id == comp_id).delete(synchronize_session=False)
+            session.query(RolesComponents).filter(RolesComponents.comp_id == comp_id).delete(synchronize_session=False)
 
         return self.write(dict(code=0, msg='删除成功'))
 
@@ -134,39 +138,38 @@ class RoleCompHandler(BaseHandler):
         comp_list = data.get('comp_list', None)
         role_id = data.get('role_id', None)
         comp_list = list(set(comp_list))
+
         if not role_id:
             return self.write(dict(code=-1, msg='角色不能为空'))
 
-        with DBContext('r') as session:
-            comp_id = session.query(Components.comp_id).filter(Components.status != '10',
-                                                               Components.comp_id.in_(comp_list)).first()
+        if not comp_list:
+            return self.write(dict(code=-1, msg='选择的组件不能为空'))
 
-        if not comp_id:
-            return self.write(dict(code=-2, msg='组件不存在'))
-
-        else:
-            ### 删除映射表中不存在的
-            with DBContext('w', None, True) as session:
-                session.query(RolesComponents).filter(RolesComponents.role_id == role_id,
-                                                      RolesComponents.comp_id.notin_(comp_list)).delete(
-                    synchronize_session=False)
-
-            ### 添加新用户列表中不存在的
-            with DBContext('r') as session:
-                comp_info = session.query(RolesComponents.comp_id).filter(RolesComponents.role_id == role_id,
-                                                                          RolesComponents.comp_id.in_(comp_list)).all()
-
-            old_comp_list = []
-            for i in comp_info:
-                old_comp_list.append(i[0])
-
-            new_comp_list = list(set(comp_list) - set(old_comp_list))
-            if new_comp_list:
-                with DBContext('w', None, True) as session:
-                    for i in new_comp_list:
-                        session.add(RolesComponents(role_id=role_id, comp_id=i, status='0'))
+        with DBContext('w', None, True) as session:
+            new_comps = [RolesComponents(role_id=role_id, comp_id=i, status='0') for i in comp_list]
+            session.add_all(new_comps)
 
         return self.write(dict(code=0, msg='组件加入角色成功'))
+
+    def delete(self, *args, **kwargs):
+        data = json.loads(self.request.body.decode("utf-8"))
+        comp_list = data.get('comp_list', None)
+        role_id = data.get('role_id', None)
+        comp_list = list(set(comp_list))
+
+        if not role_id:
+            return self.write(dict(code=-1, msg='角色不能为空'))
+
+        if not comp_list:
+            return self.write(dict(code=-1, msg='选择的组件不能为空'))
+
+        ## 删除
+        with DBContext('w', None, True) as session:
+            session.query(RolesComponents).filter(RolesComponents.role_id == role_id,
+                                                  RolesComponents.comp_id.in_(comp_list)).delete(
+                synchronize_session=False)
+
+        self.write(dict(code=0, msg='从角色中删除组件成功'))
 
 
 components_urls = [

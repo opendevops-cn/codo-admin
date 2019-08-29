@@ -85,6 +85,9 @@ class MenusHandler(BaseHandler):
         elif menu_status[0] == '20':
             msg = '启用成功'
             new_status = '0'
+        else:
+            msg = '状态不符合预期，删除'
+            new_status = '10'
 
         with DBContext('w', None, True) as session:
             session.query(Menus).filter(Menus.menu_id == menu_id, Menus.status != 10).update({Menus.status: new_status})
@@ -99,6 +102,7 @@ class MenusHandler(BaseHandler):
 
         with DBContext('w', None, True) as session:
             session.query(Menus).filter(Menus.menu_id == menu_id).delete(synchronize_session=False)
+            session.query(RoleMenus).filter(RoleMenus.menu_id == menu_id).delete(synchronize_session=False)
 
         return self.write(dict(code=0, msg='删除成功'))
 
@@ -130,40 +134,40 @@ class RoleMenuHandler(BaseHandler):
 
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        menu_list = data.get('menu_list', None)
         role_id = data.get('role_id', None)
+        menu_list = data.get('menu_list', None)
         menu_list = list(set(menu_list))
+
         if not role_id:
             return self.write(dict(code=-1, msg='角色不能为空'))
 
-        with DBContext('r') as session:
-            menu_id = session.query(Menus.menu_id).filter(Menus.status != '10', Menus.menu_id.in_(menu_list)).first()
+        if not menu_list:
+            return self.write(dict(code=-1, msg='选择的菜单不能为空'))
 
-        if not menu_id:
-            return self.write(dict(code=-2, msg='菜单不存在'))
-
-        else:
-            ### 删除映射表中不存在的
-            with DBContext('w', None, True) as session:
-                session.query(RoleMenus).filter(RoleMenus.role_id == role_id,
-                                                RoleMenus.menu_id.notin_(menu_list)).delete(synchronize_session=False)
-
-            ### 添加新列表中不存在的
-            with DBContext('r') as session:
-                menu_info = session.query(RoleMenus.menu_id).filter(RoleMenus.role_id == role_id,
-                                                                    RoleMenus.menu_id.in_(menu_list)).all()
-
-            old_menu_list = []
-            for i in menu_info:
-                old_menu_list.append(i[0])
-
-            new_menu_list = list(set(menu_list) - set(old_menu_list))
-            if new_menu_list:
-                with DBContext('w', None, True) as session:
-                    for i in new_menu_list:
-                        session.add(RoleMenus(role_id=role_id, menu_id=i, status='0'))
+        with DBContext('w', None, True) as session:
+            new_menus = [RoleMenus(role_id=role_id, menu_id=i, status='0') for i in menu_list]
+            session.add_all(new_menus)
 
         return self.write(dict(code=0, msg='菜单加入角色成功'))
+
+    def delete(self, *args, **kwargs):
+        data = json.loads(self.request.body.decode("utf-8"))
+        role_id = data.get('role_id', None)
+        menu_list = data.get('menu_list', None)
+        menu_list = list(set(menu_list))
+
+        if not role_id:
+            return self.write(dict(code=-1, msg='角色不能为空'))
+
+        if not menu_list:
+            return self.write(dict(code=-1, msg='选择的菜单不能为空'))
+
+        ## 删除
+        with DBContext('w', None, True) as session:
+            session.query(RoleMenus).filter(RoleMenus.role_id == role_id, RoleMenus.menu_id.in_(menu_list)).delete(
+                synchronize_session=False)
+
+        self.write(dict(code=0, msg='从角色中删除菜单成功'))
 
 
 menus_urls = [

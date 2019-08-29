@@ -17,7 +17,7 @@ from websdk.jwt_token import gen_md5
 from websdk.tools import check_password
 from libs.base_handler import BaseHandler
 from websdk.db_context import DBContext
-from models.admin import Users, model_to_dict
+from models.admin import Users, UserRoles,model_to_dict
 from websdk.consts import const
 from websdk.cache_context import cache_conn
 
@@ -124,6 +124,7 @@ class UserHandler(BaseHandler):
                 return self.write(dict(code=-2, msg='系统管理员用户无法删除'))
 
             session.query(Users).filter(Users.user_id == user_id).delete(synchronize_session=False)
+            session.query(UserRoles).filter(UserRoles.user_id == user_id).delete(synchronize_session=False)
 
         self.write(dict(code=0, msg='删除成功'))
 
