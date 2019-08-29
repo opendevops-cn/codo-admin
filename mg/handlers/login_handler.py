@@ -100,6 +100,9 @@ class LoginHandler(RequestHandler):
                     else:
                         return self.write(dict(code=-4, msg='账号密码错误'))
 
+        if 'user_info' not in dir():
+            return self.write(dict(code=-4, msg='账号异常'))
+
         if user_info.status != '0':
             return self.write(dict(code=-4, msg='账号被禁用'))
 
@@ -183,8 +186,7 @@ def get_user_rules(user_id, is_superuser=False):
                 component_data[msg[0]] = True
 
         else:
-            this_menus = session.query(Menus.menu_name).outerjoin(RoleMenus,
-                                                                  Menus.menu_id == RoleMenus.menu_id).outerjoin(
+            this_menus = session.query(Menus.menu_name).outerjoin(RoleMenus, Menus.menu_id == RoleMenus.menu_id).outerjoin(
                 UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id,
                                                                           UserRoles.status == '0',
                                                                           Menus.status == '0').all()

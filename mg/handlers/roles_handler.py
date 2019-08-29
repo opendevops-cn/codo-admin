@@ -10,7 +10,7 @@ Desc    : 角色
 import json
 from libs.base_handler import BaseHandler
 from websdk.db_context import DBContext
-from models.admin import Users, Roles, UserRoles, model_to_dict
+from models.admin import Users, Roles, UserRoles,RolesComponents,RoleMenus, model_to_dict
 
 
 class RoleHandler(BaseHandler):
@@ -63,6 +63,9 @@ class RoleHandler(BaseHandler):
 
         with DBContext('w', None, True) as session:
             session.query(Roles).filter(Roles.role_id == role_id).delete(synchronize_session=False)
+            session.query(UserRoles).filter(UserRoles.role_id == role_id).delete(synchronize_session=False)
+            session.query(RolesComponents).filter(RolesComponents.role_id == role_id).delete(synchronize_session=False)
+            session.query(RoleMenus).filter(RoleMenus.role_id == role_id).delete(synchronize_session=False)
 
         return self.write(dict(code=0, msg='删除成功'))
 
@@ -143,48 +146,37 @@ class RoleUserHandler(BaseHandler):
         user_list = data.get('user_list', None)
         role_id = data.get('role_id', None)
         user_list = list(set(user_list))
+
         if not role_id:
             return self.write(dict(code=-1, msg='角色不能为空'))
 
-        with DBContext('r') as session:
-            user_id = session.query(Users.user_id).filter(Users.status != '10', Users.user_id.in_(user_list)).first()
+        if not user_list:
+            return self.write(dict(code=-1, msg='选择的用户不能为空'))
 
-        if not user_id:
-            return self.write(dict(code=-2, msg='用户不存在'))
-
-        else:
-            ### 删除映射表中不存在的
-            with DBContext('w', None, True) as session:
-                session.query(UserRoles).filter(UserRoles.role_id == role_id,
-                                                UserRoles.user_id.notin_(user_list)).delete(synchronize_session=False)
-
-            ### 添加新用户列表中不存在的
-            with DBContext('r') as session:
-                user_info = session.query(UserRoles.user_id).filter(UserRoles.role_id == role_id,
-                                                                    UserRoles.user_id.in_(user_list)).all()
-
-            old_user_list = []
-            for i in user_info:
-                old_user_list.append(i[0])
-
-            new_user_list = list(set(user_list) - set(old_user_list))
-            if new_user_list:
-                with DBContext('w', None, True) as session:
-                    for i in new_user_list:
-                        session.add(UserRoles(role_id=role_id, user_id=i, status='0'))
+        with DBContext('w', None, True) as session:
+            new_users = [UserRoles(role_id=role_id, user_id=i, status='0') for i in user_list]
+            session.add_all(new_users)
 
         return self.write(dict(code=0, msg='用户加入角色成功'))
 
     def delete(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        role_id = data.get('del_id', None)
+        user_list = data.get('user_list', None)
+        role_id = data.get('role_id', None)
+        user_list = list(set(user_list))
+
         if not role_id:
-            return self.write(dict(code=-1, msg='不能为空'))
+            return self.write(dict(code=-1, msg='角色不能为空'))
 
+        if not user_list:
+            return self.write(dict(code=-1, msg='选择的用户不能为空'))
+
+        ## 删除
         with DBContext('w', None, True) as session:
-            session.query(UserRoles).filter(UserRoles.user_role_id.in_(role_id)).delete(synchronize_session=False)
+            session.query(UserRoles).filter(UserRoles.role_id == role_id,
+                                            UserRoles.user_id.in_(user_list)).delete(synchronize_session=False)
 
-        self.write(dict(code=0, msg='删除成功'))
+        self.write(dict(code=0, msg='从角色中删除用户成功'))
 
 
 roles_urls = [

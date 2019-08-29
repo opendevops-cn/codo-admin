@@ -96,6 +96,9 @@ class FuncHandler(BaseHandler):
         elif func_status[0] == '20':
             msg = '启用成功'
             new_status = '0'
+        else:
+            msg = '状态不符合预期，删除'
+            new_status = '10'
 
         with DBContext('w', None, True) as session:
             session.query(Functions).filter(Functions.func_id == func_id, Functions.status != 10).update(
@@ -111,6 +114,7 @@ class FuncHandler(BaseHandler):
 
         with DBContext('w', None, True) as session:
             session.query(Functions).filter(Functions.func_id == func_id).delete(synchronize_session=False)
+            session.query(RoleFunctions).filter(RoleFunctions.func_id == func_id).delete(synchronize_session=False)
 
         return self.write(dict(code=0, msg='删除成功'))
 
@@ -125,7 +129,8 @@ class RoleFuncHandler(BaseHandler):
             return self.write(dict(code=-1, msg='角色不能为空'))
 
         with DBContext('r') as session:
-            role_func = session.query(Functions).outerjoin(RoleFunctions, Functions.func_id == RoleFunctions.func_id).filter(
+            role_func = session.query(Functions).outerjoin(RoleFunctions,
+                                                           Functions.func_id == RoleFunctions.func_id).filter(
                 RoleFunctions.role_id == role_id, RoleFunctions.status == '0').all()
 
         for msg in role_func:
@@ -163,42 +168,41 @@ class RoleFuncHandler(BaseHandler):
 
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        func_list = data.get('func_list', None)
         role_id = data.get('role_id', None)
+        func_list = data.get('func_list', None)
         func_list = list(set(func_list))
+
         if not role_id:
             return self.write(dict(code=-1, msg='角色不能为空'))
 
-        with DBContext('r') as session:
-            func_id = session.query(Functions.func_id).filter(Functions.status != '10',
-                                                              Functions.func_id.in_(func_list)).first()
+        if not func_list:
+            return self.write(dict(code=-1, msg='选择的权限不能为空'))
 
-        if not func_id:
-            return self.write(dict(code=-2, msg='此后端权限不存在'))
+        with DBContext('w', None, True) as session:
+            new_funcs = [RoleFunctions(role_id=role_id, func_id=i, status='0') for i in func_list]
+            session.add_all(new_funcs)
 
-        else:
-            ### 删除映射表中不存在的
-            with DBContext('w', None, True) as session:
-                session.query(RoleFunctions).filter(RoleFunctions.role_id == role_id,
-                                                    RoleFunctions.func_id.notin_(func_list)).delete(
-                    synchronize_session=False)
+        return self.write(dict(code=0, msg='权限加入角色成功'))
 
-            ### 添加新列表中不存在的
-            with DBContext('r') as session:
-                func_info = session.query(RoleFunctions.func_id).filter(RoleFunctions.role_id == role_id,
-                                                                        RoleFunctions.func_id.in_(func_list)).all()
+    def delete(self, *args, **kwargs):
+        data = json.loads(self.request.body.decode("utf-8"))
+        role_id = data.get('role_id', None)
+        func_list = data.get('func_list', None)
+        func_list = list(set(func_list))
 
-            old_func_list = []
-            for i in func_info:
-                old_func_list.append(i[0])
+        if not role_id:
+            return self.write(dict(code=-1, msg='角色不能为空'))
 
-            new_func_list = list(set(func_list) - set(old_func_list))
-            if new_func_list:
-                with DBContext('w', None, True) as session:
-                    for i in new_func_list:
-                        session.add(RoleFunctions(role_id=role_id, func_id=i, status='0'))
+        if not func_list:
+            return self.write(dict(code=-1, msg='选择的权限不能为空'))
 
-        return self.write(dict(code=0, msg='角色赋权成功'))
+        ## 删除
+        with DBContext('w', None, True) as session:
+            session.query(RoleFunctions).filter(RoleFunctions.role_id == role_id,
+                                                RoleFunctions.func_id.in_(func_list)).delete(
+                synchronize_session=False)
+
+        self.write(dict(code=0, msg='从角色中删除权限成功'))
 
 
 functions_urls = [
