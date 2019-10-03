@@ -81,6 +81,7 @@ class UserRegisterHandler(RequestHandler):
         wechat = data.get('wechat', None)
         no = data.get('no', None)
         email = data.get('email', None)
+        user_state = data.get('user_state', '20')
         if not username or not nickname or not department or not tel or not wechat or not no or not email:
             return self.write(dict(code=-1, msg='参数不能为空'))
 
@@ -103,12 +104,13 @@ class UserRegisterHandler(RequestHandler):
             return self.write(dict(code=-4, msg='昵称已注册'))
 
         if not password:
-            md5_password = shortuuid.uuid()
-            password = gen_md5(md5_password)
+            the_password = shortuuid.uuid()
         else:
             if not check_password(password):
                 return self.write(dict(code=-5, msg='密码复杂度必须为： 超过8位，包含数字，大小写字母 等'))
-            password = gen_md5(password)
+            the_password = password
+
+        password = gen_md5(the_password)
 
         mfa = base64.b32encode(bytes(str(shortuuid.uuid() + shortuuid.uuid())[:-9], encoding="utf-8")).decode("utf-8")
 
@@ -124,9 +126,9 @@ class UserRegisterHandler(RequestHandler):
 
         with DBContext('w', None, True) as session:
             session.add(Users(username=username, password=password, nickname=nickname, department=department, tel=tel,
-                              wechat=wechat, no=no, email=email, google_key=mfa, superuser='10'))
+                              wechat=wechat, no=no, email=email, google_key=mfa, superuser='10', status=user_state))
 
-        obj.send_mail(email, '用户注册成功', '密码为：{} \n MFA：{}'.format(password, mfa), subtype='plain')
+        obj.send_mail(email, '用户注册成功', '密码为：{} \n MFA：{}'.format(the_password, mfa), subtype='plain')
         return self.write(dict(code=0, msg='恭喜你！ 注册成功，赶紧联系管理员给你添加权限吧！！！', mfa=mfa))
 
 
@@ -211,7 +213,7 @@ class ResetPasswordHandler(BaseHandler):
                        mail_user=config_info.get(const.EMAIL_HOST_USER),
                        mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
                        mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False,
-                       mail_tls = True if config_info.get(const.EMAIL_USE_TLS) == '1' else False)
+                       mail_tls=True if config_info.get(const.EMAIL_USE_TLS) == '1' else False)
 
         with DBContext('w', None, True) as session:
             for user_id in user_list:
