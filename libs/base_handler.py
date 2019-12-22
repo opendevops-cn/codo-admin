@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*-coding:utf-8-*-
 
+import jwt
 import shortuuid
 from websdk.cache import get_cache
 from websdk.base_handler import BaseHandler as SDKBaseHandler
@@ -14,6 +15,7 @@ class BaseHandler(SDKBaseHandler):
         self.new_csrf_key = str(shortuuid.uuid())
         self.user_id, self.username, self.nickname, self.email, self.is_super = None, None, None, None, False
         self.is_superuser = self.is_super
+        self.token_verify = True
 
         super(BaseHandler, self).__init__(*args, **kwargs)
 
@@ -21,7 +23,9 @@ class BaseHandler(SDKBaseHandler):
 
         # 验证客户端CSRF，如请求为GET，则不验证，否则验证。最后将写入新的key
         cache = get_cache()
-        if self.request.method not in ("GET", "HEAD", "OPTIONS"):
+        if self.request.method in ("GET", "HEAD", "OPTIONS") or self.request.headers.get('Sdk-Method'):
+            pass
+        else:
             csrf_key = self.get_cookie('csrf_key')
             pipeline = cache.get_pipeline()
             result = cache.get(csrf_key, private=False, pipeline=pipeline)
@@ -39,8 +43,11 @@ class BaseHandler(SDKBaseHandler):
             raise HTTPError(401, 'auth failed 1')
 
         else:
-            auth_token = AuthToken()
-            user_info = auth_token.decode_auth_token(auth_key)
+            if self.token_verify:
+                auth_token = AuthToken()
+                user_info = auth_token.decode_auth_token(auth_key)
+            else:
+                user_info = jwt.decode(auth_key, verify=False).get('data')
             self.user_id = user_info.get('user_id', None)
             self.username = user_info.get('username', None)
             self.nickname = user_info.get('nickname', None)

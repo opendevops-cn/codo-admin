@@ -77,6 +77,7 @@ class UserHandler(BaseHandler):
         wechat = data.get('wechat', None)
         no = data.get('no', None)
         email = data.get('email', None)
+        user_state = data.get('user_state', '20')
         if not username or not nickname or not department or not tel or not wechat or not no or not email:
             return self.write(dict(code=-1, msg='参数不能为空'))
 
@@ -108,7 +109,7 @@ class UserHandler(BaseHandler):
 
         with DBContext('w', None, True) as session:
             session.add(Users(username=username, password=password, nickname=nickname, department=department, tel=tel,
-                              wechat=wechat, no=no, email=email, google_key=mfa, superuser='10', status='20'))
+                              wechat=wechat, no=no, email=email, google_key=mfa, superuser='10', status=user_state))
 
         self.write(dict(code=0, msg='如果没填写密码 则新用户密码为：shenshuo'))
 
