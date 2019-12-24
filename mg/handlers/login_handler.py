@@ -162,7 +162,6 @@ class LogoutHandler(BaseHandler):
 
 class AuthorizationHandler(BaseHandler):
     async def get(self, *args, **kwargs):
-        user_id = self.request_user_id
 
         page_data, component_data = {'all': False}, {'all': False}
 
@@ -176,16 +175,15 @@ class AuthorizationHandler(BaseHandler):
             else:
                 this_menus = session.query(Menus.menu_name).outerjoin(RoleMenus,
                                                                       Menus.menu_id == RoleMenus.menu_id).outerjoin(
-                    UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id,
+                    UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == self.request_user_id,
                                                                               UserRoles.status == '0',
                                                                               Menus.status == '0').all()
 
                 this_components = session.query(Components.component_name).outerjoin(RolesComponents,
                                                                                      Components.comp_id == RolesComponents.comp_id
                                                                                      ).outerjoin(
-                    UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id,
-                                                                                    UserRoles.status == '0',
-                                                                                    Components.status == '0').all()
+                    UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(
+                    UserRoles.user_id == self.request_user_id, UserRoles.status == '0', Components.status == '0').all()
 
                 for p in this_menus: page_data[p[0]] = True
                 for c in this_components: component_data[c[0]] = True
