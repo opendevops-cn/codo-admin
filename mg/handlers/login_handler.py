@@ -144,7 +144,7 @@ class LoginHandler(RequestHandler):
         my_verify = MyVerify(user_id, is_superuser)
         my_verify.write_verify()
         ### 前端权限写入缓存
-        get_user_rules(user_id, is_superuser)
+        # get_user_rules(user_id, is_superuser)
 
         return self.write(dict(code=0, auth_key=auth_key.decode(), username=user_info.username,
                                nickname=user_info.nickname, msg='登录成功'))
@@ -161,15 +161,49 @@ class LogoutHandler(BaseHandler):
 
 
 class AuthorizationHandler(BaseHandler):
-    def get(self, *args, **kwargs):
-        user_id = self.get_current_id()
+    async def get(self, *args, **kwargs):
+        user_id = self.request_user_id
 
-        redis_conn = cache_conn()
-        page = redis_conn.hget("{}_rules".format(user_id), 'page')
-        component = redis_conn.hget("{}_rules".format(user_id), 'component')
+        page_data, component_data = {'all': False}, {'all': False}
 
-        data = dict(rules=dict(page=literal_eval(convert(page)), component=literal_eval(convert(component))))
+        with DBContext('r') as session:
+
+            if self.request_is_superuser:
+                components_info = session.query(Components.component_name).filter(Components.status == '0').all()
+                page_data['all'] = True
+                for msg in components_info: component_data[msg[0]] = True
+
+            else:
+                this_menus = session.query(Menus.menu_name).outerjoin(RoleMenus,
+                                                                      Menus.menu_id == RoleMenus.menu_id).outerjoin(
+                    UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id,
+                                                                              UserRoles.status == '0',
+                                                                              Menus.status == '0').all()
+
+                this_components = session.query(Components.component_name).outerjoin(RolesComponents,
+                                                                                     Components.comp_id == RolesComponents.comp_id
+                                                                                     ).outerjoin(
+                    UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id,
+                                                                                    UserRoles.status == '0',
+                                                                                    Components.status == '0').all()
+
+                for p in this_menus: page_data[p[0]] = True
+                for c in this_components: component_data[c[0]] = True
+
+        data = dict(rules=dict(page=page_data, component=component_data))
         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
+
+
+# class AuthorizationHandler(BaseHandler):
+#     def get(self, *args, **kwargs):
+#         user_id = self.get_current_id()
+#
+#         redis_conn = cache_conn()
+#         page = redis_conn.hget("{}_rules".format(user_id), 'page')
+#         component = redis_conn.hget("{}_rules".format(user_id), 'component')
+#
+#         data = dict(rules=dict(page=literal_eval(convert(page)), component=literal_eval(convert(component))))
+#         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
 
 
 def get_user_rules(user_id, is_superuser=False):
@@ -186,7 +220,8 @@ def get_user_rules(user_id, is_superuser=False):
                 component_data[msg[0]] = True
 
         else:
-            this_menus = session.query(Menus.menu_name).outerjoin(RoleMenus, Menus.menu_id == RoleMenus.menu_id).outerjoin(
+            this_menus = session.query(Menus.menu_name).outerjoin(RoleMenus,
+                                                                  Menus.menu_id == RoleMenus.menu_id).outerjoin(
                 UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(UserRoles.user_id == user_id,
                                                                           UserRoles.status == '0',
                                                                           Menus.status == '0').all()
