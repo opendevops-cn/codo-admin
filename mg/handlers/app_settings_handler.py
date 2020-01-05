@@ -10,6 +10,8 @@ Desc    : 系统配置API
 import time
 import json
 from tornado import gen
+from tornado.concurrent import run_on_executor
+from concurrent.futures import ThreadPoolExecutor
 from libs.base_handler import BaseHandler
 from websdk.ldap import LdapApi
 from websdk.utils import SendMail, SendSms
@@ -45,6 +47,25 @@ class AppSettingsHandler(BaseHandler):
 
 class CheckSettingsHandler(BaseHandler):
 
+    _thread_pool = ThreadPoolExecutor(5)
+    @run_on_executor(executor='_thread_pool')
+    def send_mail_pool(self, *args_list):
+        send_list = args_list[0]
+        config_info = args_list[1]
+        try:
+            obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST),
+                           mail_port=config_info.get(const.EMAIL_PORT),
+                           mail_user=config_info.get(const.EMAIL_HOST_USER),
+                           mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
+                           mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False,
+                           mail_tls=True if config_info.get(const.EMAIL_USE_TLS) == '1' else False)
+
+            obj.send_mail(send_list[0], send_list[1], send_list[2], subtype=send_list[3], att=send_list[4])
+            return dict(code=0, msg='邮件发送成功')
+
+        except Exception as e:
+            return dict(code=-1, msg='邮件发送失败 {}'.format(str(e)))
+
     @gen.coroutine
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode('utf-8'))
@@ -59,15 +80,9 @@ class CheckSettingsHandler(BaseHandler):
             with DBContext('r') as session:
                 mail_to = session.query(Users.email).filter(Users.user_id == user_id).first()
 
-            obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST),
-                           mail_port=config_info.get(const.EMAIL_PORT),
-                           mail_user=config_info.get(const.EMAIL_HOST_USER),
-                           mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
-                           mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False,
-                           mail_tls=True if config_info.get(const.EMAIL_USE_TLS) == '1' else False)
-
-            obj.send_mail(mail_to[0], 'OPS测试邮件', '测试发送邮件成功', subtype='plain')
-            return self.write(dict(code=0, msg='测试邮件已经发送'))
+            send_list = [mail_to[0], 'OPS测试邮件',  '测试发送邮件成功', 'plain', None]
+            res = yield self.send_mail_pool(send_list, config_info)
+            return self.write(res)
 
         elif check_key == 'SMS':
             obj = SendSms(config_info.get(const.SMS_REGION), config_info.get(const.SMS_DOMAIN),
