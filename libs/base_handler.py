@@ -23,7 +23,8 @@ class BaseHandler(SDKBaseHandler):
 
         # 验证客户端CSRF，如请求为GET，则不验证，否则验证。最后将写入新的key
         cache = get_cache()
-        if self.request.method in ("GET", "HEAD", "OPTIONS") or self.request.headers.get('Sdk-Method'):
+        if self.request.method in ("GET", "HEAD", "OPTIONS") or self.request.headers.get(
+                'Sdk-Method') == 'zQtY4sw7sqYspVLrqV':
             pass
         else:
             csrf_key = self.get_cookie('csrf_key')
