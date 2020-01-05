@@ -34,12 +34,11 @@ class LoginHandler(RequestHandler):
         password = data.get('password', None)
         dynamic = data.get('dynamic', None)
 
-        if not username or not password:
-            return self.write(dict(code=-1, msg='账号密码不能为空'))
+        if not username or not password: return self.write(dict(code=-1, msg='账号密码不能为空'))
 
+        redis_conn = cache_conn()
+        configs_init('all')
         if is_mail(username):
-            redis_conn = cache_conn()
-            configs_init('all')
             login_mail = redis_conn.hget(const.APP_SETTINGS, const.EMAILLOGIN_DOMAIN)
             if login_mail:
                 if is_mail(username, login_mail.decode('utf-8')):
@@ -64,8 +63,8 @@ class LoginHandler(RequestHandler):
                                                         Users.status != '10').first()
 
             if not user_info:
-                redis_conn = cache_conn()
-                configs_init('all')
+                # redis_conn = cache_conn()
+                # configs_init('all')
                 ldap_login = redis_conn.hget(const.APP_SETTINGS, const.LDAP_ENABLE)
                 ldap_login = convert(ldap_login)
                 if ldap_login != '1':
@@ -106,13 +105,12 @@ class LoginHandler(RequestHandler):
         if user_info.status != '0':
             return self.write(dict(code=-4, msg='账号被禁用'))
 
-        if user_info.superuser == '0':
-            is_superuser = True
-        else:
-            is_superuser = False
+        is_superuser = True if user_info.superuser == '0' else False
 
         ### 如果被标记为必须动态验证切没有输入动态密钥，则跳转到二维码添加密钥的地方
-        if user_info.google_key:
+        ### 默认为 True， False 则全局禁用MFA
+        mfa_global = False if convert(redis_conn.hget(const.APP_SETTINGS, const.MFA_GLOBAL)) == '1' else True
+        if mfa_global and user_info.google_key:
             if not dynamic:
                 ### 第一次不带MFA的认证
                 return self.write(dict(code=1, msg='跳转二次认证'))
@@ -124,10 +122,15 @@ class LoginHandler(RequestHandler):
 
         user_id = str(user_info.user_id)
         ### 生成token 并写入cookie
-        token_info = dict(user_id=user_id, username=user_info.username, nickname=user_info.nickname,
-                          email=user_info.email, is_superuser=is_superuser)
+        token_exp_hours = redis_conn.hget(const.APP_SETTINGS, const.TOKEN_EXP_TIME)
+        if token_exp_hours and convert(token_exp_hours):
+            token_info = dict(user_id=user_id, username=user_info.username, nickname=user_info.nickname,
+                              email=user_info.email, is_superuser=is_superuser, exp_hours=token_exp_hours)
+        else:
+            token_info = dict(user_id=user_id, username=user_info.username, nickname=user_info.nickname,
+                              email=user_info.email, is_superuser=is_superuser)
         auth_token = AuthToken()
-        auth_key = auth_token.encode_auth_token(**token_info)
+        auth_key = auth_token.encode_auth_token_v2(**token_info)
         login_ip_list = self.request.headers.get("X-Forwarded-For")
         if login_ip_list:
             login_ip = login_ip_list.split(",")[0]
