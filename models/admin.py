@@ -42,7 +42,7 @@ class Users(Base):
     user_id = Column('user_id', Integer, primary_key=True, autoincrement=True)
     username = Column('username', String(50), unique=True)
     password = Column('password', String(100))
-    nickname = Column('nickname', String(100), index=True)
+    nickname = Column('nickname', String(100), unique=True, index=True)
     email = Column('email', String(80), unique=True)  ### 邮箱
     tel = Column('tel', String(11), index=True)  ### 手机号
     wechat = Column('wechat', String(50))  ### 微信号
