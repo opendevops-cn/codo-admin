@@ -5,6 +5,7 @@ ADD . /var/www/codo-admin/
 
 RUN pip3 install  -i https://pypi.tuna.tsinghua.edu.cn/simple -r /var/www/codo-admin/requirements.txt
 
+COPY docker/nginx_default.conf /etc/nginx/nginx.conf
 COPY docker/nginx_ops.conf /etc/nginx/conf.d/codo-admin.conf
 COPY docker/supervisor_ops.conf  /etc/supervisord.conf
 

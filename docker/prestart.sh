@@ -5,6 +5,7 @@ cd /var/www/codo-admin/
   echo -e "\033[32m [INFO]: 开始修改各项目的配置文件 \033[0m"
   sed -i "s#cookie_secret = .*#cookie_secret = '${cookie_secret}'#g" settings.py
   sed -i "s#token_secret = .*#token_secret = '${token_secret}'#g" settings.py
+  sed -i "s#secret_key = .*#secret_key = '${secret_key}'#g" settings.py
   DEFAULT_DB_DBNAME='codo_admin'
   sed -i "s#DEFAULT_DB_DBHOST = .*#DEFAULT_DB_DBHOST = os.getenv('DEFAULT_DB_DBHOST', '${DEFAULT_DB_DBHOST}')#g" settings.py
   sed -i "s#DEFAULT_DB_DBPORT = .*#DEFAULT_DB_DBPORT = os.getenv('DEFAULT_DB_DBPORT', '${DEFAULT_DB_DBPORT}')#g" settings.py
@@ -28,18 +29,17 @@ do
      if $(curl  -s ${DEFAULT_DB_DBHOST}:${DEFAULT_DB_DBPORT}  > /dev/null);then
           python3 db_sync.py
           sleep 3
-          mycli -h${DEFAULT_DB_DBHOST} -u${DEFAULT_DB_DBUSER} -p${MYSQL_PASSWORD} codo_admin < codo_admin_beta0.3.sql
           check_admin_user_num=`mycli -h${DEFAULT_DB_DBHOST} -u${DEFAULT_DB_DBUSER} -p${MYSQL_PASSWORD} codo_admin -e "select username from mg_users where username='admin';" | wc -l`
-          if [ ${check_admin_user_num} -eq 0 ]; then 
-               mysql -h${DEFAULT_DB_DBHOST} -u${DEFAULT_DB_DBUSER} -p${MYSQL_PASSWORD} codo_admin < ./codo_admin_beta0.3.sql; 
-          else 
-               echo "初始化用户已存在" ; 
+          if [ ${check_admin_user_num} -eq 1 ]; then
+               mycli -h${DEFAULT_DB_DBHOST} -u${DEFAULT_DB_DBUSER} -p${MYSQL_PASSWORD} codo_admin < sql/codo_admin_beta0.3.sql;
+          else
+               echo "初始化用户已存在" ;
           fi
-          
-          if [ $? -eq 0 ]; then 
-               echo -e "\033[32m [INFO]: 导入codo-admin用户权限数据完成. \033[0m"; 
+
+          if [ $? -eq 0 ]; then
+               echo -e "\033[32m [INFO]: 导入codo-admin用户权限数据完成. \033[0m";
           else 
-               echo -e "\033[31m [ERROR]: 导入codo-admin用户权限数据完成失败 \033[0m" && exit -6; 
+               echo -e "\033[31m [ERROR]: 导入codo-admin用户权限数据完成失败 \033[0m" && exit -6;
           fi
 
           exit 0
