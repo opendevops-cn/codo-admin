@@ -6,7 +6,6 @@ date   : 2018年10月23日
 desc   : 管理后台数据库
 """
 
-
 from sqlalchemy import Column, String, Integer, DateTime, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import class_mapper
@@ -27,14 +26,13 @@ class OperationRecord(Base):
 
     ### 操作记录
     id = Column('id', Integer, primary_key=True, autoincrement=True)
-    username = Column('username', String(50))
-    nickname = Column('nickname', String(50))
+    username = Column('username', String(50), index=True)
+    nickname = Column('nickname', String(100))
     login_ip = Column('login_ip', String(20))
     method = Column('method', String(10))
-    uri = Column('uri', String(150))
+    uri = Column('uri', String(255))
     data = Column('data', Text())
     ctime = Column('ctime', DateTime(), default=datetime.now, onupdate=datetime.now)
-
 
 
 class Users(Base):
@@ -44,14 +42,14 @@ class Users(Base):
     user_id = Column('user_id', Integer, primary_key=True, autoincrement=True)
     username = Column('username', String(50), unique=True)
     password = Column('password', String(100))
-    nickname = Column('nickname', String(100))
+    nickname = Column('nickname', String(100), unique=True, index=True)
     email = Column('email', String(80), unique=True)  ### 邮箱
-    tel = Column('tel', String(11))  ### 手机号
+    tel = Column('tel', String(11), index=True)  ### 手机号
     wechat = Column('wechat', String(50))  ### 微信号
     no = Column('no', String(50))  ### 工号
-    department = Column('department', String(50))  ### 部门
+    department = Column('department', String(50), index=True, default='unkown')  ### 部门
     google_key = Column('google_key', String(80))  ### 谷歌认证秘钥
-    superuser = Column('superuser', String(5), default='10')  ### 超级用户  0代表超级用户
+    superuser = Column('superuser', String(5), default='10', index=True)  ### 超级用户  0代表超级用户
     status = Column('status', String(5), default='0')
     last_ip = Column('last_ip', String(20), default='')
     last_login = Column('last_login', DateTime(), default=datetime.now, onupdate=datetime.now)
@@ -63,7 +61,7 @@ class Roles(Base):
 
     ### 角色表
     role_id = Column('role_id', Integer, primary_key=True, autoincrement=True)
-    role_name = Column('role_name', String(30))
+    role_name = Column('role_name', String(128), index=True)
     status = Column('status', String(5), default='0')
     ctime = Column('ctime', DateTime(), default=datetime.now, onupdate=datetime.now)
 
@@ -73,8 +71,8 @@ class UserRoles(Base):
 
     ### 用户角色关联表
     user_role_id = Column('user_role_id', Integer, primary_key=True, autoincrement=True)
-    role_id = Column('role_id', String(11))
-    user_id = Column('user_id', String(11))
+    role_id = Column('role_id', String(11), index=True)
+    user_id = Column('user_id', String(11), index=True)
     status = Column('status', String(5), default='0')
     utime = Column('utime', DateTime(), default=datetime.now, onupdate=datetime.now)
     ctime = Column('ctime', DateTime(), default=datetime.now)
@@ -94,8 +92,8 @@ class RolesComponents(Base):
 
     ### 角色与前端组件关联表
     role_comp_id = Column('role_comp_id', Integer, primary_key=True, autoincrement=True)
-    role_id = Column('role_id', String(11))
-    comp_id = Column('comp_id', String(11))
+    role_id = Column('role_id', String(11), index=True)
+    comp_id = Column('comp_id', String(11), index=True)
     status = Column('status', String(5), default='0')
 
 
@@ -104,26 +102,30 @@ class Menus(Base):
 
     ### 前端路由权限
     menu_id = Column('menu_id', Integer, primary_key=True, autoincrement=True)
-    menu_name = Column('menu_name', String(60))
+    menu_name = Column('menu_name', String(80))
     status = Column('status', String(5), default='0')
+
 
 class RoleMenus(Base):
     __tablename__ = 'mg_role_menus'
 
     ### 角色与前端路由关联
     role_menu_id = Column('role_menu_id', Integer, primary_key=True, autoincrement=True)
-    role_id = Column('role_id', String(11))
-    menu_id = Column('menu_id', String(11))
+    role_id = Column('role_id', String(11), index=True)
+    menu_id = Column('menu_id', String(11), index=True)
     status = Column('status', String(5), default='0')
+
 
 class Functions(Base):
     __tablename__ = 'mg_functions'
 
     ### 权限表
     func_id = Column('func_id', Integer, primary_key=True, autoincrement=True)
-    func_name = Column('func_name', String(60))
-    uri = Column('uri', String(300))
-    method_type = Column('method_type', String(10))
+    func_name = Column('func_name', String(128))
+    app_code = Column('app_code', String(128))
+    uri = Column('uri', String(255))
+    method_type = Column('method_type', String(10), index=True)
+    parameters = Column('parameters', Text(), default='')
     status = Column('status', String(5), default='0')
     utime = Column('utime', DateTime(), default=datetime.now, onupdate=datetime.now)
     ctime = Column('ctime', DateTime(), default=datetime.now)
@@ -134,6 +136,6 @@ class RoleFunctions(Base):
 
     ### 角色权限关联表
     id = Column('id', Integer, primary_key=True, autoincrement=True)
-    role_id = Column('role_id', String(11))
-    func_id = Column('func_id', String(11))
+    role_id = Column('role_id', String(11), index=True)
+    func_id = Column('func_id', String(11), index=True)
     status = Column('status', String(5), default='0')
