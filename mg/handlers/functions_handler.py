@@ -10,6 +10,7 @@ Desc    :
 import json
 from libs.base_handler import BaseHandler
 from websdk.db_context import DBContext
+from websdk.model_utils import queryset_to_list
 from models.admin import Functions, RoleFunctions, model_to_dict
 
 
@@ -17,43 +18,41 @@ class FuncHandler(BaseHandler):
     def get(self, *args, **kwargs):
         key = self.get_argument('key', default=None, strip=True)
         value = self.get_argument('value', default=None, strip=True)
-        page_size = self.get_argument('page', default=1, strip=True)
-        limit = self.get_argument('limit', default=2000, strip=True)
+        page_size = self.get_argument('page', default='1', strip=True)
+        limit = self.get_argument('limit', default='2000', strip=True)
         limit_start = (int(page_size) - 1) * int(limit)
-        func_list = []
+
         with DBContext('r') as session:
             if key and value:
                 count = session.query(Functions).filter(Functions.status != '10').filter_by(**{key: value}).count()
                 func_info = session.query(Functions).filter(Functions.status != '10').filter_by(
-                    **{key: value}).order_by(Functions.func_id).offset(limit_start).limit(int(limit))
+                    **{key: value}).order_by(Functions.app_code).offset(limit_start).limit(int(limit))
             else:
                 count = session.query(Functions).filter(Functions.status != '10').count()
                 func_info = session.query(Functions).filter(Functions.status != '10').order_by(
-                    Functions.func_id).offset(limit_start).limit(int(limit))
-        for msg in func_info:
-            data_dict = model_to_dict(msg)
-            data_dict['ctime'] = str(data_dict['ctime'])
-            data_dict['utime'] = str(data_dict['utime'])
-            func_list.append(data_dict)
+                    Functions.app_code).offset(limit_start).limit(int(limit))
 
+        func_list = queryset_to_list(func_info)
         return self.write(dict(code=0, msg='获取成功', data=func_list, count=count))
 
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
         func_name = data.get('func_name', None)
         method_type = data.get('method_type', None)
+        app_code = data.get('app_code')
+        parameters = data.get('parameters')
         uri = data.get('uri', None)
-        if not func_name or not method_type or not uri:
-            return self.write(dict(code=-1, msg='不能为空'))
+        if not func_name or not method_type or not uri:  return self.write(dict(code=-1, msg='不能为空'))
 
         with DBContext('r') as session:
             is_exist = session.query(Functions.func_id).filter(Functions.func_name == func_name).first()
 
-        if is_exist:
-            return self.write(dict(code=-3, msg='权限"{}"已存在'.format(func_name)))
+        if is_exist:  return self.write(dict(code=-3, msg='权限"{}"已存在'.format(func_name)))
 
         with DBContext('w', None, True) as session:
-            session.add(Functions(func_name=func_name, method_type=method_type, uri=uri, status='0'))
+            session.add(
+                Functions(func_name=func_name, method_type=method_type, app_code=app_code, parameters=parameters,
+                          uri=uri, status='0'))
 
         self.write(dict(code=0, msg='权限创建成功'))
 
@@ -62,15 +61,16 @@ class FuncHandler(BaseHandler):
         func_id = data.get('func_id', None)
         func_name = data.get('func_name', None)
         method_type = data.get('method_type', None)
+        app_code = data.get('app_code')
+        parameters = data.get('parameters')
         uri = data.get('uri', None)
-
         if not func_id or not func_name or not method_type or not uri:
             return self.write(dict(code=-1, msg='不能为空'))
 
         with DBContext('w', None, True) as session:
             session.query(Functions).filter(Functions.func_id == int(func_id)).update(
-                {Functions.method_type: method_type, Functions.func_name: func_name,
-                 Functions.uri: uri})
+                {Functions.method_type: method_type, Functions.func_name: func_name, Functions.app_code: app_code,
+                 Functions.parameters: parameters, Functions.uri: uri})
 
         return self.write(dict(code=0, msg='编辑成功'))
 
@@ -80,8 +80,7 @@ class FuncHandler(BaseHandler):
         func_id = data.get('func_id', None)
         msg = '权限不存在'
 
-        if not func_id:
-            return self.write(dict(code=-1, msg='不能为空'))
+        if not func_id:  return self.write(dict(code=-1, msg='不能为空'))
 
         with DBContext('r') as session:
             func_status = session.query(Functions.status).filter(Functions.func_id == func_id,
@@ -122,11 +121,10 @@ class FuncHandler(BaseHandler):
 class RoleFuncHandler(BaseHandler):
 
     def get(self, *args, **kwargs):
-        role_id = self.get_argument('role_id', default=1, strip=True)
+        role_id = self.get_argument('role_id', default=None, strip=True)
         data_list = []
 
-        if not role_id:
-            return self.write(dict(code=-1, msg='角色不能为空'))
+        if not role_id: return self.write(dict(code=-1, msg='角色不能为空'))
 
         with DBContext('r') as session:
             role_func = session.query(Functions).outerjoin(RoleFunctions,
@@ -186,15 +184,13 @@ class RoleFuncHandler(BaseHandler):
 
     def delete(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        role_id = data.get('role_id', None)
-        func_list = data.get('func_list', None)
+        role_id = data.get('role_id')
+        func_list = data.get('func_list')
         func_list = list(set(func_list))
 
-        if not role_id:
-            return self.write(dict(code=-1, msg='角色不能为空'))
+        if not role_id: return self.write(dict(code=-1, msg='角色不能为空'))
 
-        if not func_list:
-            return self.write(dict(code=-1, msg='选择的权限不能为空'))
+        if not func_list: return self.write(dict(code=-1, msg='选择的权限不能为空'))
 
         ## 删除
         with DBContext('w', None, True) as session:

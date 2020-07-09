@@ -8,6 +8,7 @@ Desc    :
 """
 
 from models.admin import Base as Abase
+from models.resource_model import Base as Rbase
 from models.app_config import Base
 from websdk.consts import const
 from settings import settings as app_settings
@@ -27,12 +28,14 @@ engine = create_engine('mysql+pymysql://%s:%s@%s:%s/%s?charset=utf8' % (
 def create():
     Base.metadata.create_all(engine)
     Abase.metadata.create_all(engine)
+    Rbase.metadata.create_all(engine)
     print('[Success] 表结构创建成功!')
 
 
 def drop():
     Base.metadata.drop_all(engine)
     Abase.metadata.drop_all(engine)
+    Rbase.metadata.drop_all(engine)
 
 
 if __name__ == '__main__':

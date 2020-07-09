@@ -17,6 +17,7 @@ from mg.handlers.components_handler import components_urls
 from mg.handlers.app_mg_handler import app_mg_urls
 from mg.handlers.app_settings_handler import app_settings_urls
 from mg.handlers.notifications_handler import notifications_urls
+from mg.handlers.resource_handler import resource_urls
 
 class Application(myApplication):
     def __init__(self, **settings):
@@ -31,6 +32,7 @@ class Application(myApplication):
         urls.extend(app_mg_urls)
         urls.extend(app_settings_urls)
         urls.extend(notifications_urls)
+        urls.extend(resource_urls)
         super(Application, self).__init__(urls, **settings)
 
 
