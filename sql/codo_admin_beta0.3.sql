@@ -18,6 +18,8 @@
 -- Dumping data for table `mg_app_settings`
 --
 
+use codo_admin;
+
 LOCK TABLES `mg_app_settings` WRITE;
 /*!40000 ALTER TABLE `mg_app_settings` DISABLE KEYS */;
 /*!40000 ALTER TABLE `mg_app_settings` ENABLE KEYS */;
