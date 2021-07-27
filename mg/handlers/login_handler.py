@@ -131,6 +131,7 @@ class LoginHandler(RequestHandler):
                               email=user_info.email, is_superuser=is_superuser)
         auth_token = AuthToken()
         auth_key = auth_token.encode_auth_token_v2(**token_info)
+        if isinstance(auth_key, bytes): auth_key = auth_key.decode()
         login_ip_list = self.request.headers.get("X-Forwarded-For")
         if login_ip_list:
             login_ip = login_ip_list.split(",")[0]
@@ -149,7 +150,7 @@ class LoginHandler(RequestHandler):
         ### 前端权限写入缓存
         # get_user_rules(user_id, is_superuser)
 
-        return self.write(dict(code=0, auth_key=auth_key.decode(), username=user_info.username,
+        return self.write(dict(code=0, auth_key=auth_key, username=user_info.username,
                                nickname=user_info.nickname, msg='登录成功'))
 
 
