@@ -1,0 +1,24 @@
+# docker-compose.yml
+
+version: '3'
+networks:
+        codo:
+services:
+       codo_mg:
+                restart: unless-stopped
+                image: ops_mg_image
+                networks:
+                        - codo
+                volumes:
+                  - /sys/fs/cgroup:/sys/fs/cgroup
+                ports:
+                  - "9001:8000"
+       gw_log:
+                restart: unless-stopped
+                image: ops_mg_log_image
+                networks:
+                        - codo
+                volumes:
+                  - /sys/fs/cgroup:/sys/fs/cgroup
+                depends_on:
+                        - codo_mg
