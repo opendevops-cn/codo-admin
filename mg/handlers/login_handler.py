@@ -174,7 +174,7 @@ class LoginHandler(RequestHandler):
         ###更新登录IP 和登录时间
         self.update_login_ip(user_id, self.request.headers.get("X-Forwarded-For"))
         real_login_dict = dict(code=0, auth_key=auth_key, username=user_info.username, nickname=user_info.nickname,
-                               c_url=c_url, msg='登录成功')
+                               avatar=user_info.avatar, c_url=c_url, msg='登录成功')
 
         # if other_sso_data and isinstance(other_sso_data, dict):
         #     real_login_dict = {**other_sso_data, **real_login_dict}
@@ -253,8 +253,10 @@ class AuthorizationHandler(BaseHandler):
                         app_dict['power'] = 'no'
                     app_data.append(app_dict)
 
+            ###
+            __user = session.query(Users.avatar).filter(Users.user_id == self.request_user_id).first()
         data = dict(rules=dict(page=page_data, component=component_data), app=app_data, username=self.request_username,
-                    nickname=self.request_nickname)
+                    nickname=self.request_nickname, avatar=__user[0])
         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
 
 
