@@ -11,7 +11,7 @@ from tornado.options import define
 from websdk2.program import MainProgram
 from settings import settings as app_settings
 from mg.applications import Application as MgApp
-from authority.applications import Application as AuthApp
+# from authority.applications import Application as AuthApp
 from mg.subscribe import RedisSubscriber as SubApp
 from libs.registration import Registration
 
@@ -24,8 +24,8 @@ class MyProgram(MainProgram):
         settings = app_settings
         if service in ['admin-mg-api', 'mg-api', 'mg']:
             self.__app = MgApp(**settings)
-        elif service in ['auth-api','auth']:
-            self.__app = AuthApp(**settings)
+        # elif service in ['auth-api','auth']:
+        #     self.__app = AuthApp(**settings)
         elif service in ['sub_log', 'gw_log', 'gw-log', 'admin-gw-log']:
             self.__app = SubApp(service=service, **settings)
         elif service in ['init']:
@@ -38,7 +38,6 @@ if __name__ == '__main__':
     fire.Fire(MyProgram)
 
 ### python3 startup.py --service=admin-mg-api --port=8010
-### python3 startup.py --service=auth-api --port=8020
 ### python3 startup.py --service=sub_log
 ### python3 startup.py --service=gw_log
 ### python3 startup.py --service=init
