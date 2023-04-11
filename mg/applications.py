@@ -52,7 +52,7 @@ class Application(myApplication):
         check_callback.start()
         check_callback_notice.start()
         ###
-        check_callback_dduser = PeriodicCallback(async_user_center, 3600000)  ### 3600000  一个小时
+        check_callback_dduser = PeriodicCallback(async_user_center, 60000)  ### 3600000  一个小时
         check_callback_dduser.start()
         super(Application, self).__init__(urls, **settings)
 

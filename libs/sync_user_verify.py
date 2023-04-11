@@ -49,7 +49,7 @@ def deco(cls, release=False):
 def deco1(cls, release=False):
     def _deco(func):
         def __deco(*args, **kwargs):
-            if not cls.get_lock(cls, key_timeout=1200, func_timeout=180): return False
+            if not cls.get_lock(cls, key_timeout=300, func_timeout=120): return False
             try:
                 return func(*args, **kwargs)
             finally:
@@ -211,7 +211,7 @@ def get_all_user():
     }
     url = uc_conf['endpoint'] + "/api/all-users"
     response = requests.get(url=url, params=params)
-    print(response.status_code)
+    # print(response.status_code)
     res = response.json()
     print(res.get('message'))
     return res.get('data')
@@ -224,6 +224,7 @@ def sync_user_from_ucenter():
         with DBContext('w', None, True, **settings) as session:
             for user in get_all_user():
                 user_id = str(user.get('uid'))
+                # print(user.get('email'))
                 try:
                     session.add(GetInsertOrUpdateObj(Users,
                                                      # f"username='{user_name}' and source_account_id='{user_id}' and nickname='{user.get('name')}'",
@@ -234,8 +235,8 @@ def sync_user_from_ucenter():
                                                      source="ucenter", tel=user.get('mobile'),
                                                      avatar=user.get('avatar'), username=user.get('english_name')))
                 except exc.IntegrityError as e:
-                    print(e)
+                    ins_log.read_log('info', f'async_all_user_redis_lock_key {e}')
                 except Exception as err:
-                    print(err)
+                    ins_log.read_log('info', f'async_all_user_redis_lock_key Exception {err}')
 
     index()

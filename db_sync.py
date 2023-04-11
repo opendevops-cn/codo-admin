@@ -30,7 +30,7 @@ def create():
     Base.metadata.create_all(engine)
     Abase.metadata.create_all(engine)
     Bbase.metadata.create_all(engine)
-    AuthBase.metadata.create_all(engine)
+    # AuthBase.metadata.create_all(engine)
     print('[Success] 表结构创建成功!')
 
 
@@ -38,7 +38,7 @@ def drop():
     Base.metadata.drop_all(engine)
     Abase.metadata.drop_all(engine)
     Bbase.metadata.drop_all(engine)
-    AuthBase.metadata.drop_all(engine)
+    # AuthBase.metadata.drop_all(engine)
 
 
 if __name__ == '__main__':

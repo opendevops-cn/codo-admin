@@ -50,11 +50,11 @@ class UserHandler(BaseHandler):
         password = data.get('password', None)
         department = data.get('department', None)
         tel = data.get('tel', None)
-        wechat = data.get('wechat', None)
+        have_token = data.get('have_token', 'no')
         no = data.get('no', None)
         email = data.get('email', None)
         status = data.get('status', '0')
-        if not username or not nickname or not department or not tel or not wechat or not no or not email:
+        if not username or not nickname or not department or not tel or not email:
             return self.write(dict(code=-1, msg='重要参数不能为空'))
 
         with DBContext('r') as session:
@@ -83,7 +83,7 @@ class UserHandler(BaseHandler):
 
         with DBContext('w', None, True) as session:
             user = Users(username=username, password=password, nickname=nickname, department=department, tel=tel,
-                         email=email, google_key=mfa, superuser='10', status=status)
+                         have_token=have_token, email=email, google_key=mfa, superuser='10', status=status)
             session.add(user)
             # session.commit()
             # user_id = user.id
