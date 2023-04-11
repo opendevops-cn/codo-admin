@@ -10,7 +10,7 @@ Desc    :
 from models.admin_model import Base as Abase
 from models.notice_model import Base
 from models.biz_model import Base as Bbase
-from models.authority_model import Base as AuthBase
+# from models.authority_model import Base as AuthBase
 from websdk2.consts import const
 from settings import settings as app_settings
 # ORM创建表结构
