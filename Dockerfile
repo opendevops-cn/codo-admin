@@ -10,8 +10,9 @@ ENV TZ=Asia/Shanghai
 RUN yum install -y python3 python3-pip git && \
     yum clean all
 # 3. 安装pip依赖
-RUN pip install --upgrade pip
-RUN pip3 install -U git+https://github.com/ss1917/codo_sdk.git
+#RUN pip install --upgrade pip
+RUN python3 -m pip install --upgrade pip
+RUN pip install -U git+https://github.com/ss1917/codo_sdk.git
 
 #### 以上python3.9通用
 ARG SERVICE_NAME

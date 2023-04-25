@@ -144,7 +144,7 @@ class LoginHandler(RequestHandler):
                 user_info = ldap_login_data
 
         if 'user_info' not in dir():  return self.write(dict(code=-4, msg='账号异常'))
-
+        if not user_info:  return self.write(dict(code=-4, msg='账号异常'))
         if user_info.status != '0': return self.write(dict(code=-4, msg='账号被禁用'))
 
         is_superuser = True if user_info.superuser == '0' else False

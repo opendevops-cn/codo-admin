@@ -53,7 +53,7 @@ class TokenHandler(BaseHandler):
             if user_info.have_token == 'no':
                 if not user_info.username.startswith('c-') and not user_info.username.startswith('v-'):
                     return self.write(dict(code=-3, msg='只有虚拟用户或者开启令牌才能拥有长期令牌'))
-            if user_info.superuser == '0': return self.write(dict(code=-4, msg='超级用户不能生成长期令牌'))
+            # if user_info.superuser == '0': return self.write(dict(code=-4, msg='超级用户不能生成长期令牌'))
 
         ### 生成token
         is_superuser = True if user_info.superuser == '0' else False

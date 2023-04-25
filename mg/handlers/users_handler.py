@@ -94,15 +94,24 @@ class UserHandler(BaseHandler):
 
     def delete(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        user_id = data.get('user_id', None)
-        if not user_id:  return self.write(dict(code=-1, msg='不能为空'))
+        user_id = data.get('user_id')
+        id_list = data.get('id_list')
+        if not user_id and not id_list:  return self.write(dict(code=-1, msg='不能为空'))
 
         with DBContext('w', None, True) as session:
-            user_info = session.query(Users.username).filter(Users.user_id == user_id).first()
-            if user_info[0] == 'admin':  return self.write(dict(code=-2, msg='系统管理员用户无法删除'))
+            if user_id:
+                user_info = session.query(Users.username).filter(Users.user_id == user_id).first()
+                if user_info[0] == 'admin':  return self.write(dict(code=-2, msg='系统管理员用户无法删除'))
 
-            session.query(Users).filter(Users.user_id == user_id).delete(synchronize_session=False)
-            session.query(UserRoles).filter(UserRoles.user_id == user_id).delete(synchronize_session=False)
+                session.query(Users).filter(Users.user_id == user_id).delete(synchronize_session=False)
+                session.query(UserRoles).filter(UserRoles.user_id == user_id).delete(synchronize_session=False)
+            elif id_list:
+                for user_id in id_list:
+                    user_info = session.query(Users.username).filter(Users.user_id == user_id).first()
+                    if user_info[0] == 'admin':  return self.write(dict(code=-2, msg='系统管理员用户无法删除'))
+
+                    session.query(Users).filter(Users.user_id == user_id).delete(synchronize_session=False)
+                    session.query(UserRoles).filter(UserRoles.user_id == user_id).delete(synchronize_session=False)
 
         self.write(dict(code=0, msg='删除成功'))
 

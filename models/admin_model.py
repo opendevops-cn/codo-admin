@@ -46,7 +46,7 @@ class Users(TimeBaseModel, Base):
 
     ### 用户表
     user_id = Column('user_id', Integer, primary_key=True, autoincrement=True)
-    username = Column('username', String(50), unique=True, index=True)
+    username = Column('username', String(50), index=True)
     password = Column('password', String(100))
     nickname = Column('nickname', String(100), index=True)
     email = Column('email', String(80), index=True)  ### 邮箱
@@ -54,7 +54,7 @@ class Users(TimeBaseModel, Base):
     department = Column('department', String(600))  ### 部门
     google_key = Column('google_key', String(80))  ### 谷歌认证秘钥
     superuser = Column('superuser', String(5), default='10', index=True)  ### 超级用户  0代表超级用户
-    avatar = Column('avatar', String(255), default='')  ### 头像
+    avatar = Column('avatar', String(1000), default='')  ### 头像
     source = Column('source', String(15), default='注册')
     source_account_id = Column('source_account_id', String(250), default='', index=True)
     manager = Column('manager', String(180), default='')  ###上级领导
@@ -67,7 +67,7 @@ class Users(TimeBaseModel, Base):
     last_login = Column('last_login', DateTime(), default=datetime.now, onupdate=datetime.now)
 
     __table_args__ = (UniqueConstraint('username', 'nickname', name="username_and_nickname"),
-                      UniqueConstraint('username', 'email', name="username_and_email"))
+                      UniqueConstraint('username', 'email', name="username_and_email"),)
 
 
 class Roles(TimeBaseModel, Base):

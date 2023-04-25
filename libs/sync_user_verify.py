@@ -49,7 +49,7 @@ def deco(cls, release=False):
 def deco1(cls, release=False):
     def _deco(func):
         def __deco(*args, **kwargs):
-            if not cls.get_lock(cls, key_timeout=300, func_timeout=120): return False
+            if not cls.get_lock(cls, key_timeout=180, func_timeout=30): return False
             try:
                 return func(*args, **kwargs)
             finally:
@@ -190,9 +190,6 @@ class MyVerify:
         client.put(f'{self.token_block_prefix}block', json.dumps(block_dict), lease=ttl_id)
 
 
-
-
-
 def get_all_user():
     def md5hex(sign):
         md5 = hashlib.md5()  # 创建md5加密对象
@@ -211,7 +208,6 @@ def get_all_user():
     }
     url = uc_conf['endpoint'] + "/api/all-users"
     response = requests.get(url=url, params=params)
-    # print(response.status_code)
     res = response.json()
     print(res.get('message'))
     return res.get('data')
@@ -224,7 +220,16 @@ def sync_user_from_ucenter():
         with DBContext('w', None, True, **settings) as session:
             for user in get_all_user():
                 user_id = str(user.get('uid'))
-                # print(user.get('email'))
+                username = user.get('english_name')
+                if not user.get('position'):
+                    try:
+                        session.query(Users).filter(Users.user_id == user_id).delete(synchronize_session=False)
+                        session.commit()
+                    except Exception as err:
+                        print('del', err)
+                    continue
+                if username.startswith('wb-'): continue
+
                 try:
                     session.add(GetInsertOrUpdateObj(Users,
                                                      # f"username='{user_name}' and source_account_id='{user_id}' and nickname='{user.get('name')}'",
@@ -232,11 +237,10 @@ def sync_user_from_ucenter():
                                                      source_account_id=user_id, feishu_userid=user.get('feishu_userid'),
                                                      nickname=user.get('name'), manager=user.get('manager', ''),
                                                      department=user.get('position'), email=user.get('email'),
-                                                     source="ucenter", tel=user.get('mobile'),
+                                                     source="ucenter", tel=user.get('mobile'), status='0',
                                                      avatar=user.get('avatar'), username=user.get('english_name')))
-                except exc.IntegrityError as e:
-                    ins_log.read_log('info', f'async_all_user_redis_lock_key {e}')
                 except Exception as err:
-                    ins_log.read_log('info', f'async_all_user_redis_lock_key Exception {err}')
+                    ins_log.read_log('info', f'\n async_all_user_redis_lock_key Exception {err}')
+        ins_log.read_log('info', f'async_all_user_redis_lock_key end ')
 
     index()
