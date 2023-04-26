@@ -11,9 +11,7 @@ import json
 import datetime
 from websdk2.cache_context import cache_conn
 from models.admin_model import Users, UserRoles, RoleFunctions, Functions, UserToken
-from models.biz_model import BusinessModel
 from settings import settings
-from websdk2.consts import const
 from websdk2.web_logs import ins_log
 from websdk2.tools import RedisLock
 from websdk2.db_context import DBContextV2 as DBContext
@@ -22,8 +20,7 @@ from websdk2.jwt_token import gen_md5
 from libs.etcd import Etcd3Client
 
 import requests
-from websdk2.model_utils import GetInsertOrUpdateObj
-from sqlalchemy import exc
+from websdk2.model_utils import insert_or_update
 
 try:
     requests.packages.urllib3.disable_warnings()
@@ -231,7 +228,7 @@ def sync_user_from_ucenter():
                 if username.startswith('wb-'): continue
 
                 try:
-                    session.add(GetInsertOrUpdateObj(Users,
+                    session.add(insert_or_update(Users,
                                                      # f"username='{user_name}' and source_account_id='{user_id}' and nickname='{user.get('name')}'",
                                                      f"source_account_id='{user_id}'",
                                                      source_account_id=user_id, feishu_userid=user.get('feishu_userid'),

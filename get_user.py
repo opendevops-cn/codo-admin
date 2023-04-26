@@ -16,7 +16,7 @@ from websdk2.web_logs import ins_log
 from websdk2.db_context import DBContextV2 as DBContext
 
 import requests
-from websdk2.model_utils import GetInsertOrUpdateObj
+from websdk2.model_utils import insert_or_update
 
 try:
     requests.packages.urllib3.disable_warnings()
@@ -64,7 +64,7 @@ def sync_user_from_ucenter():
                 if username.startswith('wb-'): continue
 
                 try:
-                    session.add(GetInsertOrUpdateObj(Users,
+                    session.add(insert_or_update(Users,
                                                      # f"username='{user_name}' and source_account_id='{user_id}' and nickname='{user.get('name')}'",
                                                      f"source_account_id='{user_id}'",
                                                      source_account_id=user_id, feishu_userid=user.get('feishu_userid'),
