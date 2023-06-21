@@ -18,44 +18,38 @@ from websdk2.cache_context import cache_conn
 from websdk2.jwt_token import gen_md5
 from websdk2.jwt_token import AuthToken
 from websdk2.db_context import DBContextV2 as DBContext
-from models.admin_model import UserToken, Users
-from models.admin_schemas import get_token_list
+from models.authority import UserToken, Users
+from services.token_service import get_token_list_for_api
 from datetime import datetime, timedelta
 
 
 class TokenHandler(BaseHandler):
 
     def get(self, *args, **kwargs):
-        if not self.is_superuser: return self.write(dict(code=-1, msg='不是超级管理员，没有权限'))
+        if not self.is_superuser:
+            return self.write(dict(code=-1, msg='不是超级管理员，没有权限'))
+        res = get_token_list_for_api(self.params)
 
-        filter_value = self.get_argument('searchValue', default=None, strip=True)
-        filter_map = self.get_argument('filter_map', default=None, strip=True)
-        page_size = self.get_argument('page', default='1', strip=True)
-        limit = self.get_argument('limit', default="50", strip=True)
-
-        filter_map = json.loads(filter_map) if filter_map else {}
-        count, queryset = get_token_list(int(page_size), int(limit), filter_value, **filter_map)
-
-        return self.write(dict(code=0, result=True, msg="获取成功", count=count, data=queryset))
+        return self.write(res)
 
     ### 获取长期令牌
     def post(self, *args, **kwargs):
         if not self.is_superuser: return self.write(dict(code=-1, msg='不是超级管理员，没有权限'))
 
         data = json.loads(self.request.body.decode("utf-8"))
-        user_list = data.get('user_list', None)
+        user_list = data.get('id_list', None)
 
         if len(user_list) != 1:  return self.write(dict(code=-2, msg='一次只能选择一个用户，且不能为空'))
 
         user_id = user_list[0]
         with DBContext('r') as session:
-            user_info = session.query(Users).filter(Users.user_id == user_id).first()
-            if user_info.have_token == 'no':
-                if not user_info.username.startswith('c-') and not user_info.username.startswith('v-'):
-                    return self.write(dict(code=-3, msg='只有虚拟用户或者开启令牌才能拥有长期令牌'))
-            # if user_info.superuser == '0': return self.write(dict(code=-4, msg='超级用户不能生成长期令牌'))
+            user_info = session.query(Users).filter(Users.id == user_id).first()
+            # if user_info.have_token == 'no':
+            #     if not user_info.username.startswith('c-') and not user_info.username.startswith('v-'):
+            #         return self.write(dict(code=-3, msg='只有虚拟用户或者开启令牌才能拥有长期令牌'))
+            if user_info.superuser == '0': return self.write(dict(code=-4, msg='超级用户不能生成长期令牌'))
 
-        ### 生成token
+        # 生成token
         is_superuser = True if user_info.superuser == '0' else False
 
         token_info = dict(user_id=user_id, username=user_info.username, nickname=user_info.nickname,
@@ -85,7 +79,7 @@ class TokenHandler(BaseHandler):
                        mail_tls=True if config_info.get(const.EMAIL_USE_TLS) == '1' else False)
 
         with DBContext('w', None, True) as session:
-            mail_to = session.query(Users.email).filter(Users.user_id == self.get_current_id()).first()
+            mail_to = session.query(Users.email).filter(Users.id == self.get_current_id()).first()
 
         if mail_to[0] == user_info.email:
             obj.send_mail(mail_to[0], '令牌，有效期五年', auth_key, subtype='plain')
@@ -153,7 +147,7 @@ class TokenHandler(BaseHandler):
 
 
 token_urls = [
-    (r"/v3/accounts/token/", TokenHandler, {"handle_name": "权限中心-令牌管理"}),
+    (r"/v4/token/", TokenHandler, {"handle_name": "权限中心-令牌管理"}),
 
 ]
 

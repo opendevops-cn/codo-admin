@@ -11,7 +11,6 @@ Desc    : 解释一下吧
 import json
 import datetime
 import time
-# from dateutil.relativedelta import relativedelta
 from sqlalchemy import or_, func
 from sqlalchemy.exc import IntegrityError
 from websdk2.db_context import DBContextV2 as DBContext
@@ -353,30 +352,30 @@ def get_opt_log_list(page: int = 1, limit: int = 30, start_date=None, end_date=N
 
 
 ##
-def get_token_list(page: int = 1, limit: int = 100, filter_value=None, **filter_map) -> tuple:
-    limit_start = (int(page) - 1) * int(limit)
-
-    with DBContext('r') as db:
-        if int(limit) > 100:
-            token_info = db.query(UserToken).filter(UserToken.status != '10').order_by(UserToken.user_id)
-            count = db.query(UserToken).filter(UserToken.status != '10').count()
-        else:
-            token_info = db.query(UserToken).filter(UserToken.status != '10').filter(
-                or_(UserToken.user_id == filter_value, UserToken.details.like(f'%{filter_value}%'),
-                    UserToken.nickname.like(f'%{filter_value}%'),
-                    UserToken.token == filter_value)).filter_by(
-                **filter_map).order_by(UserToken.user_id).offset(limit_start).limit(int(limit))
-
-            count = db.query(UserToken).filter(UserToken.status != '10').filter(
-                or_(UserToken.user_id == filter_value, UserToken.details.like(f'%{filter_value}%'),
-                    UserToken.nickname.like(f'%{filter_value}%'),
-                    UserToken.token == filter_value)).filter_by(**filter_map).count()
-    queryset = []
-    for msg in token_info:
-        msg = model_to_dict(msg)
-        msg['token'] = f"{msg.get('token')[0:10]} --------  {msg.get('token')[-10:]}"
-        queryset.append(msg)
-    return count, queryset
+# def get_token_list(page: int = 1, limit: int = 100, filter_value=None, **filter_map) -> tuple:
+#     limit_start = (int(page) - 1) * int(limit)
+#
+#     with DBContext('r') as db:
+#         if int(limit) > 100:
+#             token_info = db.query(UserToken).filter(UserToken.status != '10').order_by(UserToken.user_id)
+#             count = db.query(UserToken).filter(UserToken.status != '10').count()
+#         else:
+#             token_info = db.query(UserToken).filter(UserToken.status != '10').filter(
+#                 or_(UserToken.user_id == filter_value, UserToken.details.like(f'%{filter_value}%'),
+#                     UserToken.nickname.like(f'%{filter_value}%'),
+#                     UserToken.token == filter_value)).filter_by(
+#                 **filter_map).order_by(UserToken.user_id).offset(limit_start).limit(int(limit))
+#
+#             count = db.query(UserToken).filter(UserToken.status != '10').filter(
+#                 or_(UserToken.user_id == filter_value, UserToken.details.like(f'%{filter_value}%'),
+#                     UserToken.nickname.like(f'%{filter_value}%'),
+#                     UserToken.token == filter_value)).filter_by(**filter_map).count()
+#     queryset = []
+#     for msg in token_info:
+#         msg = model_to_dict(msg)
+#         msg['token'] = f"{msg.get('token')[0:10]} --------  {msg.get('token')[-10:]}"
+#         queryset.append(msg)
+#     return count, queryset
 
 
 #### 我的收藏

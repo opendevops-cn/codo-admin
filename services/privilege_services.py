@@ -14,10 +14,10 @@ from models.authority_model import Menus, Functions, Components, Apps, Roles, Ro
     RoleBusiness, RoleMenu, RoleComponent, RoleFunction, Resources, SubscribeRole, GroupsRelate
 from websdk2.cache_context import cache_conn
 
-from services.role_services import get_menu_list_for_role
-from services.role_services import get_components_list_for_role
-from services.role_services import get_func_list_for_role
-from services.role_services import get_role_list_for_user
+from services.role_service import get_menu_list_for_role
+from services.role_service import get_components_list_for_role
+from services.role_service import get_func_list_for_role
+from services.role_service import get_role_list_for_user
 
 
 def sign_privilege(**params) -> tuple:

@@ -161,7 +161,7 @@ def add_init_resource_group_public():
 
         session.add(BusinessModel(**dict(business_zh='公共项目', business_en='public',
                                          business_id=str(501), resource_group='公共项目')))
-        return
+    return
 
 
 ###

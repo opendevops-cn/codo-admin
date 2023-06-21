@@ -10,7 +10,8 @@ Desc    :
 from models.admin_model import Base as Abase
 from models.notice_model import Base
 from models.biz_model import Base as Bbase
-# from models.authority_model import Base as AuthBase
+from models.paas_model import Base as AppsBase
+from models.authority import Base as AuBase
 from websdk2.consts import const
 from settings import settings as app_settings
 # ORM创建表结构
@@ -30,7 +31,8 @@ def create():
     Base.metadata.create_all(engine)
     Abase.metadata.create_all(engine)
     Bbase.metadata.create_all(engine)
-    # AuthBase.metadata.create_all(engine)
+    AuBase.metadata.create_all(engine)
+    AppsBase.metadata.create_all(engine)
     print('[Success] 表结构创建成功!')
 
 
@@ -38,7 +40,7 @@ def drop():
     Base.metadata.drop_all(engine)
     Abase.metadata.drop_all(engine)
     Bbase.metadata.drop_all(engine)
-    # AuthBase.metadata.drop_all(engine)
+    AppsBase.metadata.drop_all(engine)
 
 
 if __name__ == '__main__':

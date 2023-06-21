@@ -10,48 +10,38 @@ Desc    : 解释一下吧
 
 from sqlalchemy import or_
 from websdk2.db_context import DBContextV2 as DBContext
-from websdk2.model_utils import queryset_to_list, model_to_dict, GetInsertOrUpdateObj
-from websdk2.utils.pydantic_utils import sqlalchemy_to_pydantic, ValidationError, PydanticDel, BaseModel
 from websdk2.sqlalchemy_pagination import paginate
-from models.authority_model import Menus, Functions, Components, Apps, Roles, Users, UserRoles, UserToken, OperationRecord, \
-    FavoritesModel, Groups, UserGroups, RolesMutual, RolesInherit, GroupRoles, OperationLogs, SyncLogs, RoleApp, \
-    RoleBusiness, RoleMenu, RoleComponent, RoleFunction, Resources, SubscribeRole, GroupsRelate
-from websdk2.cache_context import cache_conn
+from models.paas_model import AppsModel
+from websdk2.model_utils import CommonOptView
 
-from models.biz_model import BusinessModel
+opt_obj = CommonOptView(AppsModel)
 
-def get_apps_list(**params) -> tuple:
+
+def get_apps_list_for_main(**params) -> dict:
     filter_map = params.pop('filter_map') if "filter_map" in params else {}
-    if 'resource_group' in filter_map: filter_map.pop('resource_group')
-    params['page_size'] = 300  ### 默认获取到全部数据
+    params['page_size'] = 300  # 默认获取到全部数据
     with DBContext('r') as session:
-        page = paginate(session.query(Apps).filter_by(**filter_map), **params)
-    return page.total, page.items
+        page = paginate(session.query(AppsModel).filter_by(**filter_map), **params)
+    return dict(code=0, msg='获取成功', data=page.items, count=page.total)
 
 
-def get_app_list_v2(**params) -> tuple:
-    value = params.get('searchValue') if "searchValue" in params else params.get('value')
+def _get_value(value: str = None):
+    if not value:
+        return True
+    return or_(
+        AppsModel.name.like(f'%{value}%'),
+        AppsModel.code.like(f'%{value}%'),
+        AppsModel.path.like(f'%{value}%'),
+    )
+
+
+def get_apps_list_for_api(**params) -> dict:
+    value = params.get('searchValue') if "searchValue" in params else params.get('searchVal')
     filter_map = params.pop('filter_map') if "filter_map" in params else {}
-    if "app_code" in params: filter_map['app_code'] = params.get('app_code')
-    if 'resource_group' in filter_map: filter_map.pop('resource_group')
-
-    params['page_size'] = 300  ### 默认获取到全部数据
-    nickname = params.get('nickname')
-    queryset = []
-
+    if 'biz_id' in filter_map:
+        filter_map.pop('biz_id')  # 暂时不隔离
+    if 'page_size' not in params:
+        params['page_size'] = 300  # 默认获取到全部数据
     with DBContext('r') as session:
-        if value:
-            page = paginate(session.query(Apps).filter_by(**filter_map).filter(
-                or_(Apps.app_code == value, Apps.app_name.like(f'%{value}%'), Apps.path.like(f'%{value}%'))), **params)
-        else:
-            page = paginate(session.query(Apps).filter_by(**filter_map), **params)
-
-    if params.get('is_super') is not True and params.get('all') != 'yes':
-        for i in page.items:
-            user_list = i['user_list']
-            if user_list and isinstance(user_list, list) and nickname in user_list:
-                queryset.append(i)
-    else:
-        queryset = page.items
-
-    return page.total, queryset
+        page = paginate(session.query(AppsModel).filter(_get_value(value)).filter_by(**filter_map), **params)
+    return dict(msg='获取成功', code=0, count=page.total, data=page.items)

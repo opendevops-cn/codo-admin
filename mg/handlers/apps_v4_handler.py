@@ -8,21 +8,24 @@ Desc    : 应用管理
 """
 
 import json
+from abc import ABC
 from libs.base_handler import BaseHandler
 from websdk2.db_context import DBContextV2 as DBContext
 from models.admin_model import Apps, RoleApps
-from models.admin_schemas import get_apps_list, get_app_list_v2, get_apps_list_for_role
+from models.admin_schemas import get_apps_list, get_apps_list_for_role
+from services.app_services import get_apps_list_for_main, get_apps_list_for_api, opt_obj
 
 
 class AppsHandler(BaseHandler):
     def get(self, *args, **kwargs):
         self.params['nickname'] = self.nickname
         self.params['is_super'] = self.is_super
-        count, queryset = get_app_list_v2(**self.params)
+        count, queryset = get_apps_list_for_api(**self.params)
         return self.write(dict(code=0, result=True, msg="获取成功", count=count, data=queryset))
 
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
+        print(json.dumps(data))
         app_name = data.get('app_name', None)
 
         with DBContext('w', None, True) as session:
@@ -118,16 +121,42 @@ class RoleMenuHandler(BaseHandler):
         self.write(dict(code=0, msg='从角色中删除菜单成功'))
 
 
-class AppListHandler(BaseHandler):
+class AppsV4Handler(BaseHandler, ABC):
     def get(self, *args, **kwargs):
-        count, queryset = get_apps_list(**self.params)
-        return self.write(dict(code=0, msg="获取成功", count=count, data=queryset))
+        res = get_apps_list_for_api(**self.params)
+        return self.write(res)
+
+    def post(self, *args, **kwargs):
+        data = json.loads(self.request.body.decode("utf-8"))
+        res = opt_obj.handle_add(data)
+
+        self.write(res)
+
+    def put(self, *args, **kwargs):
+        data = json.loads(self.request.body.decode("utf-8"))
+        res = opt_obj.handle_update(data)
+
+        self.write(res)
+
+    def delete(self, *args, **kwargs):
+        data = json.loads(self.request.body.decode("utf-8"))
+        res = opt_obj.handle_delete(data)
+
+        self.write(res)
+
+
+class AppListHandler(BaseHandler, ABC):
+    def get(self, *args, **kwargs):
+        res = get_apps_list_for_main(**self.params)
+        self.write(res)
 
 
 apps_urls = [
     (r"/v3/accounts/role_app/", RoleMenuHandler, {"handle_name": "权限中心-应用角色管理"}),
     (r"/v3/accounts/apps/", AppsHandler, {"handle_name": "权限中心-应用管理"}),
-    (r"/v3/accounts/app/list/", AppListHandler, {"handle_name": "权限中心-访问应用列表"}),
+    (r"/v4/apps/", AppsV4Handler, {"handle_name": "PAAS管理-应用管理"}),
+    (r"/v4/role_app/", RoleMenuHandler, {"handle_name": "权限中心-应用角色管理"}),
+    (r"/v4/apps/list/", AppListHandler, {"handle_name": "PAAS管理-应用列表"}),
 
 ]
 

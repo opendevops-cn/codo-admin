@@ -217,7 +217,7 @@ class StorageMG(TimeBaseModel, Base):
 class FavoritesModel(Base):
     __tablename__ = 'mg_favorites'
 
-    ### 用户收藏表
+    # 用户收藏表
     id = Column('id', Integer, primary_key=True, autoincrement=True)
     nickname = Column('nickname', String(80), default="团团团", index=True)
     app_code = Column('app_code', String(20), default="overall", index=True)
