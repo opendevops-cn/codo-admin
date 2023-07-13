@@ -82,3 +82,15 @@ class BizModel(TimeBaseModel, Base):
         return {"tenant": self.set_model.name}
 
     __mapper_args__ = {"order_by": (sort, biz_en_name)}
+
+
+class LoginLinkModel(TimeBaseModel, Base):
+    __tablename__ = 'codo_login_link'
+
+    # 登录链接
+    id = Column('id', Integer, primary_key=True, autoincrement=True)
+    name = Column('name', String(100), nullable=False, index=True)
+    login_url = Column('login_url', String(255), nullable=False, index=True)  # 后端登录地址
+    real_url = Column('real_url', String(255), nullable=False, default='')  # 跳转地址
+    client_id = Column('client_id', String(255), nullable=False, default='')  # 应用ID
+    code = Column('code', String(50), nullable=False, default='', unique=True)  #

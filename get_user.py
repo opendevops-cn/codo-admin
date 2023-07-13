@@ -10,6 +10,7 @@ import hashlib
 import datetime
 
 from models.admin_model import Users
+from models.authority import Users
 from settings import settings
 
 from websdk2.web_logs import ins_log
@@ -56,7 +57,7 @@ def sync_user_from_ucenter():
                 username = user.get('english_name')
                 if not user.get('position'):
                     try:
-                        session.query(Users).filter(Users.user_id == user_id).delete(synchronize_session=False)
+                        session.query(Users).filter(Users.id == user_id).delete(synchronize_session=False)
                         session.commit()
                     except Exception as err:
                         print('del', err)
@@ -67,7 +68,7 @@ def sync_user_from_ucenter():
                     session.add(insert_or_update(Users,
                                                      # f"username='{user_name}' and source_account_id='{user_id}' and nickname='{user.get('name')}'",
                                                      f"source_account_id='{user_id}'",
-                                                     source_account_id=user_id, feishu_userid=user.get('feishu_userid'),
+                                                     source_account_id=user_id, fs_id=user.get('feishu_userid'),
                                                      nickname=user.get('name'), manager=user.get('manager', ''),
                                                      department=user.get('position'), email=user.get('email'),
                                                      source="ucenter", tel=user.get('mobile'), status='0',

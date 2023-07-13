@@ -209,7 +209,7 @@ def get_all_user():
     print(res.get('message'))
     return res.get('data')
 
-
+# from sqlalchemy.orm.exc import NoResultFound
 def sync_user_from_ucenter():
     @deco1(RedisLock("async_all_user_redis_lock_key"))
     def index():

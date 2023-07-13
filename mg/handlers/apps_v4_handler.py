@@ -16,7 +16,7 @@ from models.admin_schemas import get_apps_list, get_apps_list_for_role
 from services.app_services import get_apps_list_for_main, get_apps_list_for_api, opt_obj
 
 
-class AppsHandler(BaseHandler):
+class AppsHandler(BaseHandler, ABC):
     def get(self, *args, **kwargs):
         self.params['nickname'] = self.nickname
         self.params['is_super'] = self.is_super
@@ -25,7 +25,6 @@ class AppsHandler(BaseHandler):
 
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        print(json.dumps(data))
         app_name = data.get('app_name', None)
 
         with DBContext('w', None, True) as session:

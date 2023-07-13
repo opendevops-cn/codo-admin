@@ -13,6 +13,7 @@ from mg.handlers.apps_v4_handler import apps_urls
 from mg.handlers.business_handler import biz_mg_urls
 from mg.handlers.business_v4_handler import biz_v4_mg_urls
 from mg.handlers.token_v4_handler import token_urls
+from mg.handlers.login_link_handler import link_v4_urls
 from mg.handlers.app_mg_handler import app_mg_urls
 from mg.handlers.configs_handler import app_settings_urls
 from mg.handlers.notifications_handler import notifications_urls
@@ -28,6 +29,7 @@ urls.extend(func_v4_urls)
 urls.extend(menus_v4_urls)
 urls.extend(login_urls)
 urls.extend(login_v4_urls)
+urls.extend(link_v4_urls)
 urls.extend(roles_urls)
 urls.extend(functions_urls)
 urls.extend(components_urls)

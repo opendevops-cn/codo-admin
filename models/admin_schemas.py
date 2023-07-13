@@ -380,77 +380,77 @@ def get_opt_log_list(page: int = 1, limit: int = 30, start_date=None, end_date=N
 
 #### 我的收藏
 
-PydanticFavorites = sqlalchemy_to_pydantic(FavoritesModel, exclude=['id'])  ### 排除自增ID
-PydanticFavoritesUP = sqlalchemy_to_pydantic(FavoritesModel)
-
-
-def get_favorites_list(**params) -> tuple:
-    nickname = params.get('nickname')
-    app_code = params.get('app_code', 'overall')
-    key = params.get('key', '')
-    with DBContext('r') as session:
-        page = paginate(session.query(FavoritesModel).filter(FavoritesModel.app_code == app_code,
-                                                             FavoritesModel.nickname == nickname,
-                                                             FavoritesModel.key == key), **params)
-    return page.total, page.items
-
-
-def add_favorites(data: dict):
-    """添加收藏"""
-    # try:
-    #     PydanticFavorites(**data)
-    # except ValidationError as e:
-    #     return dict(code=-1, msg=str(e))
-    if '_index' in data: data.pop('_index')
-    if '_rowKey' in data: data.pop('_rowKey')
-    try:
-        with DBContext('w', None, True) as db:
-            db.add(FavoritesModel(**data))
-    except IntegrityError as e:
-        with DBContext('w', None, True) as db:
-            db.query(FavoritesModel).filter(FavoritesModel.app_code == data.get('app_code'),
-                                            FavoritesModel.nickname == data.get('nickname'),
-                                            FavoritesModel.key == data.get('key')).update(data)
-        return dict(code=0, msg="修改成功")
-    except Exception as err:
-        return dict(code=-1, msg='创建失败')
-
-    return dict(code=0, msg="创建成功")
-
-
-def up_favorites(data: dict):
-    """修改收藏"""
-    if '_index' in data: data.pop('_index')
-    if '_rowKey' in data: data.pop('_rowKey')
-    # try:
-    #     valid_data = PydanticFavorites(**data)
-    # except ValidationError as e:
-    #     return dict(code=-1, msg=str(e))
-
-    try:
-        with DBContext('w', None, True) as db:
-            db.query(FavoritesModel).filter(FavoritesModel.app_code == data.get('app_code'),
-                                            FavoritesModel.nickname == data.get('nickname'),
-                                            FavoritesModel.key == data.get('key')).update(data)
-    except IntegrityError as e:
-        return dict(code=-2, msg="添加重复了")
-    except Exception as err:
-        return dict(code=-3, msg=f'修改失败, {str(err)}')
-
-    return dict(code=0, msg="修改成功")
-
-
-def del_favorites(data: dict):
-    """删除收藏"""
-    try:
-        valid_data = PydanticDel(**data)
-    except ValidationError as e:
-        return dict(code=-1, msg=str(e))
-
-    try:
-        with DBContext('w', None, True) as db:
-            db.query(FavoritesModel).filter(FavoritesModel.id == valid_data.id).delete(synchronize_session=False)
-    except Exception as err:
-        return dict(code=-3, msg=f'删除失败, {str(err)}')
-
-    return dict(code=0, msg="删除成功")
+# PydanticFavorites = sqlalchemy_to_pydantic(FavoritesModel, exclude=['id'])  ### 排除自增ID
+# PydanticFavoritesUP = sqlalchemy_to_pydantic(FavoritesModel)
+#
+#
+# def get_favorites_list(**params) -> tuple:
+#     nickname = params.get('nickname')
+#     app_code = params.get('app_code', 'overall')
+#     key = params.get('key', '')
+#     with DBContext('r') as session:
+#         page = paginate(session.query(FavoritesModel).filter(FavoritesModel.app_code == app_code,
+#                                                              FavoritesModel.nickname == nickname,
+#                                                              FavoritesModel.key == key), **params)
+#     return page.total, page.items
+#
+#
+# def add_favorites(data: dict):
+#     """添加收藏"""
+#     # try:
+#     #     PydanticFavorites(**data)
+#     # except ValidationError as e:
+#     #     return dict(code=-1, msg=str(e))
+#     if '_index' in data: data.pop('_index')
+#     if '_rowKey' in data: data.pop('_rowKey')
+#     try:
+#         with DBContext('w', None, True) as db:
+#             db.add(FavoritesModel(**data))
+#     except IntegrityError as e:
+#         with DBContext('w', None, True) as db:
+#             db.query(FavoritesModel).filter(FavoritesModel.app_code == data.get('app_code'),
+#                                             FavoritesModel.nickname == data.get('nickname'),
+#                                             FavoritesModel.key == data.get('key')).update(data)
+#         return dict(code=0, msg="修改成功")
+#     except Exception as err:
+#         return dict(code=-1, msg='创建失败')
+#
+#     return dict(code=0, msg="创建成功")
+#
+#
+# def up_favorites(data: dict):
+#     """修改收藏"""
+#     if '_index' in data: data.pop('_index')
+#     if '_rowKey' in data: data.pop('_rowKey')
+#     # try:
+#     #     valid_data = PydanticFavorites(**data)
+#     # except ValidationError as e:
+#     #     return dict(code=-1, msg=str(e))
+#
+#     try:
+#         with DBContext('w', None, True) as db:
+#             db.query(FavoritesModel).filter(FavoritesModel.app_code == data.get('app_code'),
+#                                             FavoritesModel.nickname == data.get('nickname'),
+#                                             FavoritesModel.key == data.get('key')).update(data)
+#     except IntegrityError as e:
+#         return dict(code=-2, msg="添加重复了")
+#     except Exception as err:
+#         return dict(code=-3, msg=f'修改失败, {str(err)}')
+#
+#     return dict(code=0, msg="修改成功")
+#
+#
+# def del_favorites(data: dict):
+#     """删除收藏"""
+#     try:
+#         valid_data = PydanticDel(**data)
+#     except ValidationError as e:
+#         return dict(code=-1, msg=str(e))
+#
+#     try:
+#         with DBContext('w', None, True) as db:
+#             db.query(FavoritesModel).filter(FavoritesModel.id == valid_data.id).delete(synchronize_session=False)
+#     except Exception as err:
+#         return dict(code=-3, msg=f'删除失败, {str(err)}')
+#
+#     return dict(code=0, msg="删除成功")

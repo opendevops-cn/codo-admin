@@ -10,7 +10,7 @@ Desc    : 解释一下吧
 
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from .pydantic_utils import sqlalchemy_to_pydantic, ValidationError
+from websdk2.model_utils import sqlalchemy_to_pydantic, ValidationError
 from .notice_model import NoticeConfig, NoticeTemplate
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.sqlalchemy_pagination import paginate

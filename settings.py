@@ -42,12 +42,14 @@ DEFAULT_ETCD_HOST_PORT = os.getenv('DEFAULT_ETCD_HOST_PORT', (("10.10.6.154", 23
 DEFAULT_ETCD_PROTOCOL = os.getenv('DEFAULT_ETCD_PROTOCOL', 'http')
 DEFAULT_REDIS_USER = os.getenv('DEFAULT_REDIS_USER', None)
 DEFAULT_ETCD_PASSWORD = os.getenv('DEFAULT_ETCD_PASSWORD', None)
-api_gw = ""     ### 网关
-settings_auth_key = ""   ### 服务之间认证
-notice_conf_map = {}     ### 通知中心使用
-oss_data_private = {}    ### 上传私有仓库使用
+api_gw = ""  ### 网关
+settings_auth_key = ""  ### 服务之间认证
+notice_conf_map = {}  ### 通知中心使用
+oss_data_private = {}  ### 上传私有仓库使用
 ###
-uc_conf = ""  ### 从用户中心同步数据
+uc_conf = {}  # 从用户中心同步数据
+fs_conf = {}  # 飞书登录验证
+ldap_conf = {}  # ldap登录验证
 try:
     from local_settings import *
 except:
@@ -62,12 +64,14 @@ settings = dict(
     max_body_size=max_body_size,
     max_buffer_size=max_buffer_size,
     uc_conf=uc_conf,
+    fs_conf=fs_conf,
+    ldap_conf=ldap_conf,
     api_gw=api_gw,
     settings_auth_key=settings_auth_key,
     notice_conf_map=notice_conf_map,
     oss_data_private=oss_data_private,
     etcd_prefix=etcd_prefix,
-    app_name='do_mg',
+    app_name='codo_mg',
     databases={
         const.DEFAULT_DB_KEY: {
             const.DBHOST_KEY: DEFAULT_DB_DBHOST,

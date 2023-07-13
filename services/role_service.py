@@ -7,21 +7,22 @@ Author  : shenshuo
 Date    : 2020/12/10 15:14
 Desc    : 解释一下吧
 """
-import json
 
-from sqlalchemy import or_, and_, func, desc, case
+import json
+from sqlalchemy import or_
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.sqlalchemy_pagination import paginate
 from websdk2.cache_context import cache_conn
 from models.authority import Roles, UserRoles, Users
-from websdk2.model_utils import CommonOptView, queryset_to_list
+from websdk2.model_utils import CommonOptView
 
 opt_obj = CommonOptView(Roles)
 ROLE_USER_INFO_STR = "ROLE_USER_INFO_STR"
 
 
 def _get_value(value: str = None):
-    if not value: return True
+    if not value:
+        return True
     return or_(
         Roles.id == value,
         Roles.role_name.like(f'%{value}%')
