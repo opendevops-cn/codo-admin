@@ -314,11 +314,11 @@ class LoginFSHandler(RequestHandler, ABC):
 
 
 login_v4_urls = [
-    (r"/v4/login/", LoginHandler),
-    (r"/v4/logout/", LogoutHandler),
-    (r"/v4/authorization/", AuthorizationHandler),
-    (r"/v4/m/(.+)", LoginMHandler),
-    (r"/v4/login/feishu/", LoginFSHandler),
+    (r"/v4/acc/login/", LoginHandler),
+    (r"/v4/acc/logout/", LogoutHandler),
+    (r"/v4/acc/authorization/", AuthorizationHandler),
+    (r"/v4/acc/m/(.+)", LoginMHandler),
+    (r"/v4/acc/login/feishu/", LoginFSHandler),
 ]
 
 if __name__ == "__main__":
