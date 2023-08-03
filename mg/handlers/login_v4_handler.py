@@ -10,24 +10,22 @@ import json
 import base64
 from typing import *
 from abc import ABC
+from shortuuid import uuid
 from libs.base_handler import BaseHandler
 from tornado.web import RequestHandler, HTTPError
-from websdk2.jwt_token import AuthToken, gen_md5
-# from websdk2.tools import is_mail
-# from websdk2.utils import mail_login
-# from websdk2.model_utils import queryset_to_list, model_to_dict
-import pyotp
-from websdk2.db_context import DBContextV2 as DBContext
-from models.authority import Users, Components, RolesComponents, Menus, RoleMenus, UserRoles
-from websdk2.consts import const
-from websdk2.cache_context import cache_conn
-# from websdk2.tools import convert
-from websdk2.ldap import LdapApi
-from libs.login_by_feishu import FeiShuAuth, with_protocol_feishu
-from libs.login_by_other import OtherAuthV3
 from concurrent.futures import ThreadPoolExecutor
 from tornado.concurrent import run_on_executor
 from tornado import gen
+from websdk2.jwt_token import AuthToken, gen_md5
+import pyotp
+from websdk2.db_context import DBContextV2 as DBContext
+from models.authority import Users, Components, RolesComponents, Menus, RoleMenus, UserRoles, Roles
+from websdk2.consts import const
+from websdk2.cache_context import cache_conn
+from websdk2.ldap import LdapApi
+from services.sys_service import get_sys_conf_dict_for_me
+from libs.login_by_feishu import FeiShuAuth, with_protocol_feishu
+from libs.login_by_other import OtherAuthV3
 
 
 class LoginHandler(RequestHandler, ABC):
@@ -55,50 +53,37 @@ class LoginHandler(RequestHandler, ABC):
     def other_authentication(self, **kwargs) -> Optional[Users]:
         return OtherAuthV3(**kwargs)()
 
-    # @run_on_executor(executor='_thread_pool')
-    # def other_authentication(self, **kwargs):
-    #     from libs.login_by_other import OtherAuthV2
-    #     return OtherAuthV2(**kwargs)()
-    #
-    # @run_on_executor(executor='_thread_pool')
-    # def mail_authentication(self, username, password, user_info):
-    #     login_mail = self.redis_conn.hget(const.APP_SETTINGS, const.EMAILLOGIN_DOMAIN)
-    #     if isinstance(login_mail, bytes): login_mail = login_mail.decode('utf-8')
-    #
-    #     if login_mail:
-    #         if is_mail(username, login_mail):
-    #             email = username
-    #             username = email.split("@")[0]
-    #             email_server = self.redis_conn.hget(const.APP_SETTINGS, const.EMAILLOGIN_SERVER).decode('utf-8')
-    #             if not email_server: return dict(code=-9, msg='请配置邮箱服务的SMTP服务地址')
-    #             mail_login_state = mail_login(email, password, email_server)
-    #             # print(mail_login_state)
-    #             if not mail_login_state: return dict(code=-2, msg='邮箱登陆认证失败')
-    #             if not user_info: return dict(code=-3, msg='邮箱认证通过，请根据邮箱完善用户信息', username=username,
-    #                                           email=email)
-    #
-    #     return True
-    #
     @run_on_executor(executor='_thread_pool')
-    def ldap_authentication(self, username, password, ldap_conf):
-        ldap_ssl = True if ldap_conf.get(const.LDAP_USE_SSL) == '1' else False
+    def ldap_authentication(self, username, password):
+        password = base64.b64decode(password).decode("utf-8")
+        password = base64.b64decode(password).decode("utf-8")
+
+        ldap_conf = get_sys_conf_dict_for_me(**dict(category='ldap'))
+        if ldap_conf.get(const.LDAP_ENABLE) == 'no':
+            return dict(code=-5, msg='请联系管理员启用LDAP登录')
+
+        if not ldap_conf:
+            return dict(code=-5, msg='请补全LDAP信息')
 
         obj = LdapApi(ldap_conf.get(const.LDAP_SERVER_HOST), ldap_conf.get(const.LDAP_ADMIN_DN),
-                      ldap_conf.get(const.LDAP_ADMIN_PASSWORD),
-                      int(ldap_conf.get(const.LDAP_SERVER_PORT, 389)), ldap_ssl)
+                      ldap_conf.get(const.LDAP_ADMIN_PASSWORD), ldap_conf.get(const.LDAP_USE_SSL))
 
-        ldap_pass_info = obj.ldap_auth_v2(username, password, ldap_conf.get(const.LDAP_SEARCH_BASE),
-                                          ldap_conf.get(const.LDAP_SEARCH_FILTER))
-
+        ldap_pass_info = obj.ldap_auth_v3(username, password, ldap_conf.get(const.LDAP_SEARCH_BASE),
+                                          ldap_conf.get(const.LDAP_ATTRIBUTES), ldap_conf.get(const.LDAP_SEARCH_FILTER))
         if not ldap_pass_info[0]:
             return dict(code=-4, msg='账号密码错误')
 
         with DBContext('r') as session:
             user_info = session.query(Users).filter(Users.username == username, Users.status != '10').first()
 
-        if not user_info:
-            return dict(code=-6, msg='LDAP认证通过，完善用户信息', username=ldap_pass_info[1],
-                        email=ldap_pass_info[2])
+            if not user_info:
+                # 没有账户就自动注册一个
+                mfa = base64.b32encode(bytes(str(uuid() + uuid())[:-9], encoding="utf-8")).decode("utf-8")
+                attr_dict = ldap_pass_info[1]
+
+                session.add(Users(username=attr_dict.get('username', username),
+                                  nickname=attr_dict.get('nickname', username),
+                                  email=attr_dict.get('email'), password=gen_md5(password), tel='', google_key=mfa))
         return user_info
 
     #
@@ -122,16 +107,16 @@ class LoginHandler(RequestHandler, ABC):
         c_url = data.get('c_url', '/')
         login_type = data.get('login_type')
 
-        fs_conf = self.settings.get('fs_conf')
+        # fs_conf = self.settings.get('fs_conf')
         uc_conf = self.settings.get('uc_conf')
-        ldap_conf = self.settings.get('ldap_conf')
         user_info = None
         if login_type == 'feishu':
+            fs_conf = get_sys_conf_dict_for_me(**dict(category='feishu'))
             feishu_login_dict = dict(code=data.get('code'), fs_redirect_uri=data.get('fs_redirect_uri'),
                                      fs_conf=fs_conf)
             user_info = yield self.feishu_authentication(**feishu_login_dict)
-        elif login_type == 'ldap' and ldap_conf and ldap_conf.get(const.LDAP_ENABLE) == 'yes':
-            ldap_login_data = yield self.ldap_authentication(username, password, ldap_conf)
+        elif login_type == 'ldap':
+            ldap_login_data = yield self.ldap_authentication(username, password)
             if isinstance(ldap_login_data, dict):
                 return self.write(ldap_login_data)
             else:
@@ -145,7 +130,9 @@ class LoginHandler(RequestHandler, ABC):
         elif login_type == 'ucenter':
             if not username or not password:
                 return self.write(dict(code=-1, msg='账号密码不能为空'))
-            login_dict = dict(username=username, password=password, uc_conf=uc_conf)
+            ucenter_password = base64.b64decode(password).decode("utf-8")
+            ucenter_password = base64.b64decode(ucenter_password).decode("utf-8")
+            login_dict = dict(username=username, password=ucenter_password, uc_conf=uc_conf)
             user_info = yield self.other_authentication(**login_dict)
 
         if not user_info:
@@ -186,7 +173,8 @@ class LoginHandler(RequestHandler, ABC):
         real_login_dict = dict(code=0, username=user_info.username, nickname=user_info.nickname, auth_key=auth_key,
                                avatar=user_info.avatar, c_url=c_url, msg='登录成功')
 
-        self.set_cookie("auth_key", auth_key, expires_days=7, httponly=True)
+        # self.set_cookie("auth_key", auth_key, expires_days=7, httponly=True)
+        self.set_cookie("auth_key", auth_key, expires_days=1)
 
         return self.write(real_login_dict)
 
@@ -206,64 +194,38 @@ class LogoutHandler(RequestHandler, ABC):
 
 class AuthorizationHandler(BaseHandler, ABC):
     async def get(self, *args, **kwargs):
-        app_code = self.get_argument('app_code', default=None, strip=True)
-
-        app_data, page_data, component_data = [], {'all': False}, {'all': False}
+        page_data, component_data = {'all': False}, {'all': False}
 
         with DBContext('r') as session:
-            # all_app = session.query(AppsModel).filter(AppsModel.status == '0').all()
-
             if self.request_is_superuser:
-                components_info = session.query(Components.component_name).filter(Components.status == '0').all()
+                components_info = session.query(Components.name).all()
                 page_data['all'] = True
                 for msg in components_info: component_data[msg[0]] = True
-                # app_data = queryset_to_list(all_app)
-
-            elif app_code and app_code != 'all':
-                this_menus = session.query(Menus.menu_name).outerjoin(
-                    RoleMenus, Menus.menu_id == RoleMenus.menu_id).outerjoin(
-                    UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(
-                    UserRoles.user_id == self.request_user_id, UserRoles.status == '0', Menus.app_code == app_code,
-                    Menus.status == '0').all()
-
-                this_components = session.query(Components.component_name).outerjoin(
-                    RolesComponents, Components.comp_id == RolesComponents.comp_id).outerjoin(
-                    UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(
-                    UserRoles.user_id == self.request_user_id, UserRoles.status == '0',
-                    Components.app_code == app_code, Components.status == '0').all()
-
-                for p in this_menus: page_data[p[0]] = True
-                for c in this_components: component_data[c[0]] = True
 
             else:
-                this_menus = session.query(Menus.menu_name).outerjoin(
-                    RoleMenus, Menus.menu_id == RoleMenus.menu_id).outerjoin(
-                    UserRoles, RoleMenus.role_id == UserRoles.role_id).filter(
-                    UserRoles.user_id == self.request_user_id, UserRoles.status == '0', Menus.status == '0').all()
+                __role = session.query(Roles).outerjoin(UserRoles, UserRoles.role_id == Roles.id).filter(
+                    UserRoles.user_id == self.request_user_id).all()
+                if __role:
+                    for role in __role:
+                        _role_list = [role.id]
+                        if role.role_subs:
+                            _role_list.extend(role.role_subs)
 
-                this_components = session.query(Components.component_name).outerjoin(
-                    RolesComponents, Components.comp_id == RolesComponents.comp_id).outerjoin(
-                    UserRoles, RolesComponents.role_id == UserRoles.role_id).filter(
-                    UserRoles.user_id == self.request_user_id, UserRoles.status == '0',
-                    Components.status == '0').all()
+                    _role_list = set(_role_list)
+                    __menus = session.query(Menus.menu_name).outerjoin(RoleMenus, Menus.id == RoleMenus.menu_id).filter(
+                        UserRoles.role_id.in_(_role_list)).all()
 
-                for p in this_menus: page_data[p[0]] = True
-                for c in this_components: component_data[c[0]] = True
+                    __component = session.query(Components.name).outerjoin(RolesComponents,
+                                                                           Components.id == RolesComponents.comp_id).filter(
+                        UserRoles.role_id.in_(_role_list)).all()
 
-            # if not self.request_is_superuser:
-            #     this_app = session.query(Apps).outerjoin(RoleApps, Apps.app_id == RoleApps.app_id).outerjoin(
-            #         UserRoles, RoleApps.role_id == UserRoles.role_id).filter(
-            #         UserRoles.user_id == self.request_user_id, UserRoles.status == '0', Apps.status == '0').all()
-            #
-            #     this_app_id_list = [i.app_id for i in this_app]
-            #     for a in all_app:
-            #         app_dict = model_to_dict(a)
-            #         if a.app_id not in this_app_id_list:
-            #             app_dict['power'] = 'no'
-            #         app_data.append(app_dict)
+                    for p in __menus: page_data[p[0]] = True
+                    for c in __component: component_data[c[0]] = True
 
             ###
-            __user = session.query(Users.avatar).filter(Users.user_id == self.request_user_id).first()
+            __user = session.query(Users.avatar).filter(Users.id == self.request_user_id).first()
+            if not __user: return self.write(dict(code=-2, msg='当前账户状态错误'))
+
         data = dict(rules=dict(page=page_data, component=component_data), username=self.request_username,
                     nickname=self.request_nickname, avatar=__user[0])
         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
@@ -311,7 +273,8 @@ class LoginFSHandler(RequestHandler, ABC):
         if not c_url or not fs_redirect_uri:
             return self.write(dict(code=-10, msg='登录出错，请重试'))
 
-        fs_conf = self.settings.get('fs_conf')
+        # fs_conf = self.settings.get('fs_conf')
+        fs_conf = get_sys_conf_dict_for_me(**dict(category='feishu'))
         feishu_login_dict = dict(code=code, fs_redirect_uri=fs_redirect_uri, fs_conf=fs_conf)
 
         user_info = yield self.feishu_authentication(**feishu_login_dict)

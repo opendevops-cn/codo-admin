@@ -9,21 +9,17 @@ Desc    : 解释一下吧
 """
 
 import json
+from abc import ABC
 from libs.base_handler import BaseHandler
-from websdk2.utils import SendMail
-from .configs_init import configs_init
-from websdk2.consts import const
-from websdk2.tools import convert
-from websdk2.cache_context import cache_conn
-from websdk2.jwt_token import gen_md5
-from websdk2.jwt_token import AuthToken
+from websdk2.jwt_token import AuthToken, gen_md5
 from websdk2.db_context import DBContextV2 as DBContext
 from models.authority import UserToken, Users
 from services.token_service import get_token_list_for_api
+from services.sys_service import init_email
 from datetime import datetime, timedelta
 
 
-class TokenHandler(BaseHandler):
+class TokenHandler(BaseHandler, ABC):
 
     def get(self, *args, **kwargs):
         if not self.is_superuser:
@@ -32,7 +28,7 @@ class TokenHandler(BaseHandler):
 
         return self.write(res)
 
-    ### 获取长期令牌
+    # 获取长期令牌
     def post(self, *args, **kwargs):
         if not self.is_superuser: return self.write(dict(code=-1, msg='不是超级管理员，没有权限'))
 
@@ -44,10 +40,9 @@ class TokenHandler(BaseHandler):
         user_id = user_list[0]
         with DBContext('r') as session:
             user_info = session.query(Users).filter(Users.id == user_id).first()
-            # if user_info.have_token == 'no':
-            #     if not user_info.username.startswith('c-') and not user_info.username.startswith('v-'):
-            #         return self.write(dict(code=-3, msg='只有虚拟用户或者开启令牌才能拥有长期令牌'))
-            if user_info.superuser == '0': return self.write(dict(code=-4, msg='超级用户不能生成长期令牌'))
+
+            if user_info.superuser == '0':
+                return self.write(dict(code=-4, msg='超级用户不能生成长期令牌'))
 
         # 生成token
         is_superuser = True if user_info.superuser == '0' else False
@@ -58,7 +53,7 @@ class TokenHandler(BaseHandler):
         auth_key = auth_token.encode_auth_token_v2(**token_info)
         if isinstance(auth_key, bytes): auth_key = auth_key.decode()
 
-        ## 入库
+        # 入库
         with DBContext('w', None, True) as session:
             token_count = session.query(UserToken).filter(UserToken.user_id == user_id,
                                                           UserToken.status != '10').count()
@@ -68,15 +63,7 @@ class TokenHandler(BaseHandler):
             session.add(UserToken(user_id=int(user_id), nickname=user_info.nickname, token=auth_key,
                                   expire_time=expire_time, token_md5=gen_md5(auth_key)))
 
-        redis_conn = cache_conn()
-        configs_init('all')
-        config_info = redis_conn.hgetall(const.APP_SETTINGS)
-        config_info = convert(config_info)
-        obj = SendMail(mail_host=config_info.get(const.EMAIL_HOST), mail_port=config_info.get(const.EMAIL_PORT),
-                       mail_user=config_info.get(const.EMAIL_HOST_USER),
-                       mail_password=config_info.get(const.EMAIL_HOST_PASSWORD),
-                       mail_ssl=True if config_info.get(const.EMAIL_USE_SSL) == '1' else False,
-                       mail_tls=True if config_info.get(const.EMAIL_USE_TLS) == '1' else False)
+        obj = init_email()
 
         with DBContext('w', None, True) as session:
             mail_to = session.query(Users.email).filter(Users.id == self.get_current_id()).first()

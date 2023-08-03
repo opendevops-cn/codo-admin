@@ -106,6 +106,3 @@ class NoticeConfig(TimeBaseModel, Base):
 
     remark = Column('remark', String(128), default="")  # 备注说明
 
-# from .pydantic_utils import sqlalchemy_to_pydantic, ValidationError
-#
-# PydanticNoticeConfig = sqlalchemy_to_pydantic(NoticeConfig, exclude=['id'])

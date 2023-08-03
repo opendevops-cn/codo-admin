@@ -77,8 +77,11 @@ class OtherAuthV3:
             "password": self.__password,
         }
         response = requests.post(url=self.url, params=params)
+        print(response)
+        print( self.__uc_conf)
         res = response.json()
         if response.status_code == 200 and res.get('message') == 'OK':
+            print('login ok')
             with DBContext('r') as session:
                 user_info = session.query(Users).filter(Users.username == self.__username,
                                                         Users.status != '10').first()

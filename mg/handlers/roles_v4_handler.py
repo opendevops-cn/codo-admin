@@ -64,10 +64,6 @@ class RoleHandler(BaseHandler, ABC):
 class RoleUserHandler(BaseHandler, ABC):
     def get(self, *args, **kwargs):
         role_id = self.get_argument('role_id', default=None, strip=True)
-        # role_name = self.get_argument('role_name', default=None, strip=True)
-        # if not role_id and not role_name:
-        #     return self.write(dict(status=-1, msg='关键参数不能为空'))
-
         res = get_users_for_role(role_id=role_id)
 
         return self.write(res)
@@ -85,12 +81,17 @@ class RoleUserHandler(BaseHandler, ABC):
         if not user_list:
             return self.write(dict(code=-1, msg='选择的用户不能为空'))
 
+        # 先删除
+        with DBContext('w', None, True) as session:
+            session.query(UserRoles).filter(UserRoles.role_id == role_id,
+                                            UserRoles.user_id.notin_(user_list)).delete(synchronize_session=False)
+
         for i in user_list:
             try:
                 with DBContext('w', None, True) as session:
                     session.add(UserRoles(role_id=role_id, user_id=int(i)))
             except IntegrityError as e:
-                print(e)
+                pass
             except Exception as err:
                 print(err)
 
@@ -103,66 +104,15 @@ class RoleUserHandler(BaseHandler, ABC):
                         continue
                 session.query(Roles).filter(Roles.id == role_id).update(dict(role_subs=role_list),
                                                                         synchronize_session=False)
-                # session.add(Roles(role_id=role_id, role_subs=role_list))
         except IntegrityError as e:
             print(e)
         except Exception as err:
             print(err)
         ###
-        redis_conn = cache_conn()
-        redis_conn.set(f"need_sync_all_cache", 'y', ex=600)
+        # redis_conn = cache_conn()
+        # redis_conn.set(f"need_sync_all_cache", 'y', ex=600)
 
         return self.write(dict(code=0, msg='用户加入角色成功'))
-
-    # def put(self, *args, **kwargs):
-    #     # 角色关联
-    #     data = json.loads(self.request.body.decode("utf-8"))
-    #     role_list = data.get('role_list', [])
-    #     role_id = data.get('role_id', None)
-    #     role_list = list(set(role_list))
-    #
-    #     if not role_id:
-    #         return self.write(dict(code=-1, msg='角色不能为空'))
-    #
-    #     if not role_list:
-    #         return self.write(dict(code=-1, msg='关联的角色不能为空'))
-    #
-    #     # with DBContext('w', None, True) as session:
-    #     # new_users = [UserRoles(role_id=role_id, user_id=int(i)) for i in user_list]
-    #     # session.add_all(new_users)
-    #     try:
-    #         with DBContext('w', None, True) as session:
-    #             session.add(Roles(id=role_id, role_subs=role_list))
-    #     except IntegrityError as e:
-    #         print(e)
-    #     except Exception as err:
-    #         print(err)
-    #     ###
-    #     redis_conn = cache_conn()
-    #     redis_conn.set(f"need_sync_all_cache", 'y', ex=600)
-    #
-    #     return self.write(dict(code=0, msg='角色加入角色成功'))
-    # def delete(self, *args, **kwargs):
-    #     data = json.loads(self.request.body.decode("utf-8"))
-    #     user_list = data.get('user_list', None)
-    #     role_id = data.get('role_id', None)
-    #     user_list = list(set(user_list))
-    #
-    #     if not role_id:
-    #         return self.write(dict(code=-1, msg='角色不能为空'))
-    #
-    #     if not user_list:
-    #         return self.write(dict(code=-1, msg='选择的用户不能为空'))
-    #
-    #     # 删除
-    #     with DBContext('w', None, True) as session:
-    #         session.query(UserRoles).filter(UserRoles.role_id == role_id,
-    #                                         UserRoles.user_id.in_(user_list)).delete(synchronize_session=False)
-    #         ###
-    #         redis_conn = cache_conn()
-    #         redis_conn.set(f"need_sync_all_cache", 'y', ex=600)
-    #
-    #     self.write(dict(code=0, msg='从角色中删除用户成功'))
 
 
 class RoleUserAllHandler(BaseHandler, ABC):
@@ -192,10 +142,13 @@ class RoleSyncHandler(BaseHandler, ABC):
 
 roles_v4_urls = [
     (r"/v4/role/list/", RoleHandler, {"handle_name": "权限中心-角色列表对外查询"}),
-    (r"/v4/role/", RoleHandler, {"handle_name": "权限中心-角色管理"}),
+    (r"/v3/accounts/role/", RoleHandler, {"handle_name": "角色列表"}),
+    (r"/v4/role/", RoleHandler, {"handle_name": "权限中心-角色管理V4"}),
     (r"/v4/role/sync/", RoleSyncHandler, {"handle_name": "权限中心-角色权限同步"}),
     (r"/v4/role_user/", RoleUserHandler, {"handle_name": "权限中心-通过角色查用户", "handle_status": "y"}),
-    (r"/v4/all_role_user/", RoleUserAllHandler, {"handle_name": "权限中心-查询所有用户角色", "handle_status": "y"})
+    # TODO 暂时保留
+    (r"/v3/accounts/all_role_user/", RoleUserAllHandler, {"handle_name": "查询所有用户角色", "handle_status": "y"}),
+    (r"/v4/all_role_user/", RoleUserAllHandler, {"handle_name": "权限中心-查询所有用户角色V4", "handle_status": "y"})
 ]
 
 if __name__ == "__main__":

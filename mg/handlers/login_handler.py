@@ -256,7 +256,7 @@ class AuthorizationHandler(BaseHandler):
             ###
             __user = session.query(Users.avatar).filter(Users.user_id == self.request_user_id).first()
         data = dict(rules=dict(page=page_data, component=component_data), app=app_data, username=self.request_username,
-                    nickname=self.request_nickname, avatar=__user[0])
+                    nickname=self.request_nickname, avatar="")
         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
 
 

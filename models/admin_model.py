@@ -204,7 +204,7 @@ class UserToken(Base):
 class StorageMG(TimeBaseModel, Base):
     __tablename__ = 'mg_storage'
 
-    ### 用户长期token表
+    # 用户上传数据记录
     id = Column('id', Integer, primary_key=True, autoincrement=True)
     storage_key = Column('storage_key', String(80))
     nickname = Column('nickname', String(80), default="匿名", index=True)

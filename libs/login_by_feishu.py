@@ -46,9 +46,13 @@ class FeiShuAuth:
         else:
             return None
 
+    def test_feishu(self):
+        # 发送测试信息
+        pass
+
     def get_access_token(self):
         # 构建请求的 URL
-        url = self.__fs_conf.get('access_url')
+        url = self.__fs_conf.get('feishu_access_url')
 
         headers = {
             'Content-Type': 'application/x-www-form-urlencoded'  # 设置为 JSON 格式
@@ -56,8 +60,8 @@ class FeiShuAuth:
 
         # 构建请求参数
         payload = {
-            'client_id': self.__fs_conf.get('client_id'),
-            'client_secret': self.__fs_conf.get('client_secret'),
+            'client_id': self.__fs_conf.get('feishu_client_id'),
+            'client_secret': self.__fs_conf.get('feishu_client_secret'),
             'grant_type': 'authorization_code',
             'redirect_uri': self.fs_redirect_uri,
             'code': self.code
@@ -79,7 +83,7 @@ class FeiShuAuth:
 
     def get_feishu_user(self, access_token):
         # 构建请求的 URL
-        url = self.__fs_conf.get('user_info_url')
+        url = self.__fs_conf.get('feishu_user_info_url')
 
         headers = {
             "Content-Type": "application/json; charset=utf-8",  # 设置为 JSON 格式

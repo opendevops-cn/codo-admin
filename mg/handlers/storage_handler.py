@@ -4,16 +4,14 @@
 Version : 0.0.1
 Contact : 191715030@qq.com
 Author  : shenshuo
-Date    : 2021/4/28 16:26 
+Date    : 2023/4/28 16:26
 Desc    : 管理对象存储
 """
 
-import os
-import re
 from libs.base_handler import BaseHandler
 from libs.oss import OSSApi
-from websdk2.db_context import DBContextV2  as DBContext
-from models.admin_model import StorageMG
+from websdk2.db_context import DBContextV2 as DBContext
+from models.paas_model import StorageMG
 
 
 class StoragePrivate(BaseHandler):
@@ -93,7 +91,7 @@ class StoragePublic(BaseHandler):
 class CDNAuth(BaseHandler):
 
     def get(self):
-        ### 记录CDN鉴权日志，暂不需要
+        # 记录CDN鉴权日志，暂不需要
         return self.write(dict(code=0, msg="鉴权成功"))
 
 

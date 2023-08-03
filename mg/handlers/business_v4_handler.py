@@ -14,8 +14,7 @@ from datetime import datetime
 from libs.base_handler import BaseHandler
 from websdk2.db_context import DBContextV2 as DBContext
 from models.paas_model import BizModel
-from services.biz_service import opt_obj, get_biz_list_for_api, get_biz_list_v3, get_biz_tree, \
-    get_tenant_list_for_api, opt_obj2, sync_biz_role_user
+from services.biz_service import opt_obj, get_biz_list_for_api, get_biz_list_v3, sync_biz_role_user
 
 
 class BusinessHandler(BaseHandler, ABC):
@@ -33,7 +32,7 @@ class BusinessHandler(BaseHandler, ABC):
         data['biz_developer'] = dict(role=data.get('biz_developer'))
         data['biz_tester'] = dict(role=data.get('biz_tester'))
         data['biz_pm'] = dict(role=data.get('biz_pm'))
-        sync_biz_role_user()
+        # sync_biz_role_user()
         res = opt_obj.handle_add(data)
 
         self.write(res)
@@ -45,6 +44,8 @@ class BusinessHandler(BaseHandler, ABC):
             del data['tenant']
         if 'ext_info' in data:
             del data['ext_info']
+        if 'users_info' in data:
+            del data['users_info']
         data['maintainer'] = dict(role=data.get('maintainer'))
         data['biz_sre'] = dict(role=data.get('biz_sre'))
         data['biz_developer'] = dict(role=data.get('biz_developer'))
@@ -74,8 +75,8 @@ class BusinessListHandler(BaseHandler, ABC):
 
     def get(self):
         self.params['is_superuser'] = self.request_is_superuser
-        self.params['username'] = self.request_username
-        self.params['user'] = self.request_fullname()
+        self.params['user_id'] = self.request_user_id
+        # self.params['user'] = self.request_fullname()
         view_biz = get_biz_list_v3(**self.params)
 
         the_biz_map = dict()
@@ -93,7 +94,7 @@ class BusinessListHandler(BaseHandler, ABC):
         except Exception as err:
             print('BusinessHandler', err)
 
-        if not the_biz_map: the_biz_map = dict(resource_group='默认项目', biz_id='502')
+        if not the_biz_map: the_biz_map = dict(biz_cn_name='默认项目', biz_id='502')
 
         self.write(dict(code=0, msg="获取成功", data=view_biz, the_biz_map=the_biz_map))
 
@@ -116,55 +117,55 @@ class BusinessListHandler(BaseHandler, ABC):
             print(err)
 
         biz_dict = {"biz_id": str(biz_info.biz_id), "biz_cn_name": str(biz_info.biz_cn_name),
-                    "business_en": biz_info.business_en}
+                    "biz_en_name": biz_info.biz_en_name}
         return self.write(dict(code=0, msg="获取成功", data=biz_dict))
 
 
-class BusinessTreeHandler(BaseHandler, ABC):
+# class BusinessTreeHandler(BaseHandler, ABC):
+#
+#     def check_xsrf_cookie(self):
+#         pass
+#
+#     def prepare(self):
+#         self.get_params_dict()
+#         self.codo_login()
+#
+#     def get(self):
+#         self.params['is_superuser'] = self.request_is_superuser
+#         self.params['user'] = str(self.request_user_id)
+#         tree_data = get_biz_tree(**self.params)
+#         return self.write(dict(code=0, msg="获取成功", data=tree_data))
 
-    def check_xsrf_cookie(self):
-        pass
 
-    def prepare(self):
-        self.get_params_dict()
-        self.codo_login()
-
-    def get(self):
-        self.params['is_superuser'] = self.request_is_superuser
-        self.params['user'] = str(self.request_user_id)
-        tree_data = get_biz_tree(**self.params)
-        return self.write(dict(code=0, msg="获取成功", data=tree_data))
-
-
-class TenantHandler(BaseHandler, ABC):
-    def get(self):
-        res = get_tenant_list_for_api(**self.params)
-        self.write(res)
-
-    def post(self):
-        data = json.loads(self.request.body.decode("utf-8"))
-        res = opt_obj2.handle_add(data)
-
-        self.write(res)
-
-    def put(self):
-        data = json.loads(self.request.body.decode("utf-8"))
-        res = opt_obj2.handle_update(data)
-
-        self.write(res)
-
-    def delete(self):
-        data = json.loads(self.request.body.decode("utf-8"))
-        res = opt_obj2.handle_delete(data)
-
-        self.write(res)
+# class TenantHandler(BaseHandler, ABC):
+#     def get(self):
+#         res = get_tenant_list_for_api(**self.params)
+#         self.write(res)
+#
+#     def post(self):
+#         data = json.loads(self.request.body.decode("utf-8"))
+#         res = opt_obj2.handle_add(data)
+#
+#         self.write(res)
+#
+#     def put(self):
+#         data = json.loads(self.request.body.decode("utf-8"))
+#         res = opt_obj2.handle_update(data)
+#
+#         self.write(res)
+#
+#     def delete(self):
+#         data = json.loads(self.request.body.decode("utf-8"))
+#         res = opt_obj2.handle_delete(data)
+#
+#         self.write(res)
 
 
 biz_v4_mg_urls = [
     (r"/v4/biz/", BusinessHandler, {"handle_name": "权限中心-业务管理"}),
-    (r"/v4/tenant/", TenantHandler, {"handle_name": "权限中心-租户管理"}),
+    # (r"/v4/tenant/", TenantHandler, {"handle_name": "权限中心-租户管理"}),
     (r"/v4/biz/list/", BusinessListHandler, {"handle_name": "权限中心-业务列表"}),
-    (r"/v4/biz/tree/", BusinessTreeHandler, {"handle_name": "权限中心-业务树"}),
+    # (r"/v4/biz/tree/", BusinessTreeHandler, {"handle_name": "权限中心-业务树"}),
 ]
 if __name__ == "__main__":
     pass

@@ -5,14 +5,19 @@ author : shenshuo
 date   : 2023年06月05日
 desc   : 平台管理
 """
+import json
+import base64
 from sqlalchemy import Column, DateTime
 from datetime import datetime
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy import Column, String, Integer, JSON, ForeignKey, UniqueConstraint
+from sqlalchemy import TypeDecorator
+from sqlalchemy import Column, String, Integer, JSON, ForeignKey, UniqueConstraint, Text
 from sqlalchemy.ext.declarative import declarative_base
+from websdk2.utils.cc_crypto import AESCryptoV3
 from models import TimeBaseModel
 
 Base = declarative_base()
+mc = AESCryptoV3()
 
 
 class AppsModel(TimeBaseModel, Base):
@@ -41,16 +46,15 @@ class FavoritesModel(Base):
     __table_args__ = (UniqueConstraint('nickname', 'app_code', 'key', name="app_code_and_key_nickname"),)
 
 
-class TenantModel(TimeBaseModel, Base):
-    __tablename__ = 'codo_tenant'
-
-    id = Column('id', Integer, primary_key=True, autoincrement=True)
-    tenantid = Column('tenantid', String(15), index=True, unique=True)
-    name = Column('name', String(50), index=True, unique=True, comment='业务集')  # 业务集  租户
-    sort = Column('sort', Integer, default=100, index=True, comment='排序')  # 排序
-    description = Column('description', String(255), default='', comment='描述')  # 描述、备注
-
-    biz = relationship('BizModel', backref='codo_biz')  # 默认一对多
+# class TenantModel(TimeBaseModel, Base):
+#     __tablename__ = 'codo_tenant'
+#
+#     id = Column('id', Integer, primary_key=True, autoincrement=True)
+#     tenantid = Column('tenantid', String(15), unique=True)
+#     name = Column('name', String(50), unique=True, comment='租户')  # 业务集  租户
+#     sort = Column('sort', Integer, default=100, index=True, comment='排序')  # 排序
+#     description = Column('description', String(255), default='', comment='描述')  # 描述、备注
+#     # biz = relationship('BizModel', backref='codo_biz')  # 默认一对多
 
 
 class BizModel(TimeBaseModel, Base):
@@ -58,7 +62,7 @@ class BizModel(TimeBaseModel, Base):
 
     id = Column('id', Integer, primary_key=True, autoincrement=True)
     biz_id = Column('biz_id', String(15), index=True, unique=True)
-    biz_en_name = Column('biz_en_name', String(50), unique=True, index=True)  # 业务英文命
+    biz_en_name = Column('biz_en_name', String(50), unique=True)  # 业务英文命
     biz_cn_name = Column('biz_cn_name', String(50), index=True, default='')  # 业务中文名
 
     maintainer = Column('maintainer', JSON(), comment='管理员')
@@ -67,6 +71,7 @@ class BizModel(TimeBaseModel, Base):
     biz_tester = Column('biz_tester', JSON(), comment='测试人员')
     biz_pm = Column('biz_pm', JSON(), comment='产品运营')
     ext_info = Column('ext_info', JSON(), default={}, comment='扩展字段存JSON')  # 扩展字段
+    users_info = Column('users_info', JSON(), default={}, comment='换成用户JSON')
 
     corporate = Column('corporate', String(255), default="", comment='公司实体')  # 公司实体
     sort = Column('sort', Integer, default=100, index=True)  # 排序
@@ -74,12 +79,12 @@ class BizModel(TimeBaseModel, Base):
     description = Column('description', String(255), default='')  # 描述、备注
     update_time = Column(DateTime, nullable=False, default=datetime.now, index=True)  # 更新时间 改为非自动
 
-    tenantid = Column(String(12), ForeignKey('codo_tenant.tenantid'))
-    set_model = relationship("TenantModel", backref=backref("codo_tenant", uselist=False))
+    # tenantid = Column(String(12), ForeignKey('codo_tenant.tenantid'))
+    # set_model = relationship("TenantModel", backref=backref("codo_tenant", uselist=False))
 
-    @property
-    def custom_extend_column_dict(self):
-        return {"tenant": self.set_model.name}
+    # @property
+    # def custom_extend_column_dict(self):
+    #     return {"tenant": self.set_model.name}
 
     __mapper_args__ = {"order_by": (sort, biz_en_name)}
 
@@ -94,3 +99,31 @@ class LoginLinkModel(TimeBaseModel, Base):
     real_url = Column('real_url', String(255), nullable=False, default='')  # 跳转地址
     client_id = Column('client_id', String(255), nullable=False, default='')  # 应用ID
     code = Column('code', String(50), nullable=False, default='', unique=True)  #
+
+
+class SystemSettings(TimeBaseModel, Base):
+    __tablename__ = 'codo_sys_settings'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(50), unique=True, nullable=False)  # key
+    value = Column(Text(), default="", comment='数据')  # value
+    is_secret = Column(String(5), default="n")  # 加密
+
+    @property
+    def custom_secret_data(self):
+        if self.is_secret == 'n':
+            return {"value": self.value}
+        else:
+            return {"value": None}
+
+
+class StorageMG(TimeBaseModel, Base):
+    __tablename__ = 'mg_storage'
+
+    # 用户上传数据记录
+    id = Column('id', Integer, primary_key=True, autoincrement=True)
+    storage_key = Column('storage_key', String(80))
+    nickname = Column('nickname', String(80), default="匿名", index=True)
+    action = Column('action', String(15), default="上传")
+    storage_type = Column('storage_type', String(15), default='OSS')
+    file_dir = Column('file_dir', String(80), default='', index=True)
+    filename = Column('filename', String(150), default='', index=True)

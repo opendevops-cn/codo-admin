@@ -42,17 +42,3 @@ class BusinessModel(TimeBaseModel, Base):
     # client_group_id = Column('client_group_id', String(11), nullable=True)  ### 租户组id
     # map_client_id = Column('map_client_id', Integer, index=True, nullable=True)
     __mapper_args__ = {"order_by": (sort, business_en)}
-
-
-class BusinessTreeModel(Base):
-    __tablename__ = 'biz_tree'
-
-    create_time = Column(DateTime, nullable=False, default=datetime.now, index=True)  # 记录的创建时间
-    update_time = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now, index=True)  # 记录的更新时间
-    tree_id = Column('tree_id', Integer, primary_key=True, autoincrement=True)
-    business_set = Column('title', String(50), index=True, unique=True, nullable=True)  ## 业务集title
-    parent = Column('parent', Integer, index=True, nullable=True)  # 上层业务集
-    business_list = Column('business_list', JSON(), default=[])
-    tree_node = Column('tree_node', Boolean, default=True)
-    tag = Column('tag', String(50), default='', index=True)
-    status = Column('status', String(5), default='0', index=True)

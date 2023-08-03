@@ -20,6 +20,7 @@ from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.tools import now_timestamp, convert
 from websdk2.jwt_token import gen_md5
 from websdk2.configs import configs
+from services.role_service import get_all_user_list_for_role
 from libs.etcd import Etcd3Client
 
 import requests
@@ -209,10 +210,16 @@ class MyVerify:
         client.put(f'{self.token_block_prefix}block', json.dumps(block_dict), lease=ttl_id)
 
 
+@deco(RedisLock("async_role_users_redis_lock_key"))
+def sync_all_user_list_for_role():
+    get_all_user_list_for_role()
+
+
 def async_api_permission_v4():
     # 启用线程去同步任务，防止阻塞
     obj = MyVerify()
     executor = ThreadPoolExecutor(max_workers=3)
     executor.submit(obj.sync_diff_api_permission)
     executor.submit(obj.sync_all_api_permission)
+    executor.submit(sync_all_user_list_for_role)
     # executor.submit(obj.token_block_list)

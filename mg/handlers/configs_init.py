@@ -13,6 +13,7 @@ from websdk2.db_context import DBContext
 from websdk2.consts import const
 from websdk2.cache_context import cache_conn
 
+
 def configs_init(setting_key):
     new_dict = {}
     """返回所有数据"""
