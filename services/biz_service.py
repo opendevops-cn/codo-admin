@@ -181,7 +181,7 @@ def sync_biz_role_user(**params):
             #
             # # Update ext_info field with the list of users
             # current_ext_info['users'] = list(set(biz_user_list))
-
+            print(biz_user_list)
             new_data.append({'id': b.id, 'users_info': list(set(biz_user_list))})
 
         session.bulk_update_mappings(BizModel, new_data)

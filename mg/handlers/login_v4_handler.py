@@ -105,9 +105,8 @@ class LoginHandler(RequestHandler, ABC):
         password = data.get('password')
         dynamic = data.get('dynamic')
         c_url = data.get('c_url', '/')
-        login_type = data.get('login_type')
+        login_type = data.get('login_type', 'ucenter')
 
-        # fs_conf = self.settings.get('fs_conf')
         uc_conf = self.settings.get('uc_conf')
         user_info = None
         if login_type == 'feishu':
@@ -122,11 +121,6 @@ class LoginHandler(RequestHandler, ABC):
             else:
                 user_info = ldap_login_data
 
-        elif not login_type or login_type == 'base':
-            if not username or not password:
-                return self.write(dict(code=-1, msg='账号密码不能为空'))
-            user_info = self.base_authentication(username=username, password=password)
-
         elif login_type == 'ucenter':
             if not username or not password:
                 return self.write(dict(code=-1, msg='账号密码不能为空'))
@@ -134,6 +128,11 @@ class LoginHandler(RequestHandler, ABC):
             ucenter_password = base64.b64decode(ucenter_password).decode("utf-8")
             login_dict = dict(username=username, password=ucenter_password, uc_conf=uc_conf)
             user_info = yield self.other_authentication(**login_dict)
+
+        if not login_type or not user_info or login_type == 'base':
+            if not username or not password:
+                return self.write(dict(code=-1, msg='账号密码不能为空'))
+            user_info = self.base_authentication(username=username, password=password)
 
         if not user_info:
             return self.write(dict(code=-4, msg='账号异常'))
@@ -314,11 +313,11 @@ class LoginFSHandler(RequestHandler, ABC):
 
 
 login_v4_urls = [
-    (r"/v4/acc/login/", LoginHandler),
-    (r"/v4/acc/logout/", LogoutHandler),
-    (r"/v4/acc/authorization/", AuthorizationHandler),
-    (r"/v4/acc/m/(.+)", LoginMHandler),
-    (r"/v4/acc/login/feishu/", LoginFSHandler),
+    (r"/v4/na/login/", LoginHandler),
+    (r"/v4/na/logout/", LogoutHandler),
+    (r"/v4/na/authorization/", AuthorizationHandler),
+    (r"/v4/na/m/(.+)", LoginMHandler),
+    (r"/v4/na/login/feishu/", LoginFSHandler),
 ]
 
 if __name__ == "__main__":
