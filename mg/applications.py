@@ -16,10 +16,10 @@ from mg.handlers import urls
 class Application(myApplication):
     def __init__(self, **settings):
         # 同步权限
-        check_callback = PeriodicCallback(async_api_permission, 18000)  ### 2000  60000  48000
-        check_callback_notice = PeriodicCallback(async_notice_info, 13000)  ### 2000  13000
-        check_callback.start()
-        check_callback_notice.start()
+        # check_callback = PeriodicCallback(async_api_permission, 18000)  ### 2000  60000  48000
+        # check_callback_notice = PeriodicCallback(async_notice_info, 13000)  ### 2000  13000
+        # check_callback.start()
+        # check_callback_notice.start()
         ###
         check_callback_user = PeriodicCallback(async_user_center, 60000)  ### 3600000  一个小时
         check_callback_user.start()
@@ -40,7 +40,7 @@ def async_api_permission():
 
 
 def async_notice_info():
-    ### 启用线程去同步任务，防止阻塞
+    # 启用线程去同步任务，防止阻塞
     from libs.sync_notice_user import NoticeUserInfo
     obj = NoticeUserInfo()
     executor = ThreadPoolExecutor(max_workers=2)
@@ -49,10 +49,10 @@ def async_notice_info():
 
 
 def async_user_center():
-    ### 启用线程去同步钉钉用户
-    from libs.sync_user_verify import sync_user_from_ucenter
+    # 启用线程去同步用户
+    from libs.sync_user_verift_v4 import sync_user_from_uc
     executor = ThreadPoolExecutor(max_workers=1)
-    executor.submit(sync_user_from_ucenter)
+    executor.submit(sync_user_from_uc)
 
 
 if __name__ == '__main__':

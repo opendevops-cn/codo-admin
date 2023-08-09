@@ -193,7 +193,7 @@ class LogoutHandler(RequestHandler, ABC):
 
 class AuthorizationHandler(BaseHandler, ABC):
     async def get(self, *args, **kwargs):
-        page_data, component_data = {'all': False}, {'all': False}
+        page_data, component_data, avatar = {'all': False}, {'all': False}, ''
 
         with DBContext('r') as session:
             if self.request_is_superuser:
@@ -204,29 +204,33 @@ class AuthorizationHandler(BaseHandler, ABC):
             else:
                 __role = session.query(Roles).outerjoin(UserRoles, UserRoles.role_id == Roles.id).filter(
                     UserRoles.user_id == self.request_user_id).all()
+
+                _role_list = []
                 if __role:
                     for role in __role:
-                        _role_list = [role.id]
+                        _role_list.append(role.id)
                         if role.role_subs:
                             _role_list.extend(role.role_subs)
 
                     _role_list = set(_role_list)
+                    print(_role_list)
                     __menus = session.query(Menus.menu_name).outerjoin(RoleMenus, Menus.id == RoleMenus.menu_id).filter(
-                        UserRoles.role_id.in_(_role_list)).all()
+                        RoleMenus.role_id.in_(_role_list)).all()
 
                     __component = session.query(Components.name).outerjoin(RolesComponents,
                                                                            Components.id == RolesComponents.comp_id).filter(
-                        UserRoles.role_id.in_(_role_list)).all()
-
+                        RolesComponents.role_id.in_(_role_list)).all()
                     for p in __menus: page_data[p[0]] = True
                     for c in __component: component_data[c[0]] = True
 
             ###
             __user = session.query(Users.avatar).filter(Users.id == self.request_user_id).first()
-            if not __user: return self.write(dict(code=-2, msg='当前账户状态错误'))
-
+            # if not __user: return self.write(dict(code=-2, msg='当前账户状态错误'))
+            if __user:
+                avatar = __user[0]
+        print(page_data, self.request_username, self.request_user_id)
         data = dict(rules=dict(page=page_data, component=component_data), username=self.request_username,
-                    nickname=self.request_nickname, avatar=__user[0])
+                    nickname=self.request_nickname, avatar=avatar)
         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
 
 

@@ -32,8 +32,8 @@ class BusinessHandler(BaseHandler, ABC):
         data['biz_developer'] = dict(role=data.get('biz_developer'))
         data['biz_tester'] = dict(role=data.get('biz_tester'))
         data['biz_pm'] = dict(role=data.get('biz_pm'))
-        # sync_biz_role_user()
         res = opt_obj.handle_add(data)
+        sync_biz_role_user()
 
         self.write(res)
 
@@ -52,8 +52,8 @@ class BusinessHandler(BaseHandler, ABC):
         data['biz_tester'] = dict(role=data.get('biz_tester'))
         data['biz_pm'] = dict(role=data.get('biz_pm'))
         data['update_time'] = datetime.now()
-        sync_biz_role_user(id=data.get('id'))
         res = opt_obj.handle_update(data)
+        sync_biz_role_user(id=data.get('id'))
 
         self.write(res)
 

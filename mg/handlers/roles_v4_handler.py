@@ -39,7 +39,7 @@ class RoleHandler(BaseHandler, ABC):
             return self.write(dict(code=-1, msg='不能为空'))
 
         with DBContext('w', None, True) as session:
-            session.query(Roles).filter(Roles.role_id == role_id).delete(synchronize_session=False)
+            session.query(Roles).filter(Roles.id == role_id).delete(synchronize_session=False)
             session.query(UserRoles).filter(UserRoles.role_id == role_id).delete(synchronize_session=False)
             session.query(RolesComponents).filter(RolesComponents.role_id == role_id).delete(synchronize_session=False)
             session.query(RoleMenus).filter(RoleMenus.role_id == role_id).delete(synchronize_session=False)
@@ -62,13 +62,19 @@ class RoleHandler(BaseHandler, ABC):
 
 
 class RoleUserHandler(BaseHandler, ABC):
+    _thread_pool = ThreadPoolExecutor(5)
+
+    @run_on_executor(executor='_thread_pool')
+    def handle_sync(self):
+        return role_sync_all()
+
     def get(self, *args, **kwargs):
         role_id = self.get_argument('role_id', default=None, strip=True)
         res = get_users_for_role(role_id=role_id)
 
         return self.write(res)
 
-    def post(self, *args, **kwargs):
+    async def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
         user_list = data.get('user_list', None)
         role_list = data.get('role_list', [])
@@ -109,9 +115,7 @@ class RoleUserHandler(BaseHandler, ABC):
         except Exception as err:
             print(err)
         ###
-        # redis_conn = cache_conn()
-        # redis_conn.set(f"need_sync_all_cache", 'y', ex=600)
-
+        await self.handle_sync()
         return self.write(dict(code=0, msg='用户加入角色成功'))
 
 

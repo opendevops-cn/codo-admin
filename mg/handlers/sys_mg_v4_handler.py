@@ -97,7 +97,7 @@ class AuthorityRegister(BaseHandler):
         menu_list = data.get('menu_list')
         component_list = data.get('component_list')
         role_list = data.get('role_list')
-        print(data)
+
         if not self.app_code: return self.write(dict(code=-1, msg='服务编码不能为空'))
 
         if func_list and isinstance(func_list, list):
@@ -251,6 +251,7 @@ sys_mg_v4_urls = [
     (r"/v4/app/opt_log/", LogV4Handler, {"handle_name": "PAAS-操作日志V4"}),
     (r'/v4/sysconfig/settings/', AppSettingsHandler),
     (r'/v4/sysconfig/check/', CheckSettingsHandler),
+    (r'/v4/authority/register/', AuthorityRegister),
     (r"/are_you_ok/", LivenessProbe, {"handle_name": "MG-存活接口"})
 ]
 

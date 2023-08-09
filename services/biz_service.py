@@ -85,10 +85,10 @@ def get_biz_list_v3(**params):
         queryset = session.query(BizModel).filter(BizModel.life_cycle != "停运").all()
     view_biz_list = []
     for b in queryset:
-        print(is_superuser,user_id, b.biz_id, b.users_info)
-        if is_superuser or b.biz_id in ['501', '502'] or user_id in b.users_info:
+        if is_superuser or b.biz_id in ['501', '502'] or str(user_id) in b.users_info:
             view_biz_list.append(
                 dict(id=b.id, biz_id=b.biz_id, biz_cn_name=b.biz_cn_name, biz_en_name=b.biz_en_name))
+    # print(view_biz_list)
     return view_biz_list
 
 
@@ -181,7 +181,6 @@ def sync_biz_role_user(**params):
             #
             # # Update ext_info field with the list of users
             # current_ext_info['users'] = list(set(biz_user_list))
-            print(biz_user_list)
             new_data.append({'id': b.id, 'users_info': list(set(biz_user_list))})
 
         session.bulk_update_mappings(BizModel, new_data)

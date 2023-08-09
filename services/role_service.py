@@ -68,22 +68,6 @@ def get_users_for_role(**kwargs) -> dict:
     return dict(code=0, msg='获取成功', data=queryset, count=count)
 
 
-# def deco(cls, release=False):
-#     def _deco(func):
-#         def __deco(*args, **kwargs):
-#             if not cls.get_lock(cls, key_timeout=120, func_timeout=60): return False
-#             try:
-#                 return func(*args, **kwargs)
-#             finally:
-#                 ### 执行完就释放key，默认不释放
-#                 if release: cls.release(cls)
-#
-#         return __deco
-#
-#     return _deco
-
-
-# @deco(RedisLock("async_role_users_redis_lock_key"))
 def get_all_user_list_for_role(**kwargs):
     role_user_dict = dict()
     role_id_user_dict = dict()
