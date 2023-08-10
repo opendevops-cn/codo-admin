@@ -40,7 +40,7 @@ class LinkHandler(BaseHandler, ABC):
 
 
 link_v4_urls = [
-    (r"/v4/login/link/", LinkHandler),
+    (r"/v4/login/link/", LinkHandler, {"handle_name": "权限中心-登录链接管理", "method": ["ALL"]}),
 ]
 
 if __name__ == "__main__":

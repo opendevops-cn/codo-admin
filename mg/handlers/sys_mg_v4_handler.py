@@ -146,15 +146,14 @@ class AuthorityRegister(BaseHandler):
     def register_component(self, data):
         for d in data:
             status = d.get('status', '0')
-            component_name = d.get('name')
+            name = d.get('name')
             details = d.get('details', '')[0:250]
-            if not component_name: continue
+            if not name: continue
             with DBContext('w', None, True) as session:
                 try:
                     session.add(insert_or_update(Components,
-                                                 f"component_name='{component_name}' and app_code='{self.app_code}'",
-                                                 app_code=self.app_code, status=status, details=details,
-                                                 component_name=component_name))
+                                                 f"name='{name}' and app_code='{self.app_code}'",
+                                                 app_code=self.app_code, details=details, name=name))
                 except exc.IntegrityError as e:
                     print(e)
                 except Exception as err:
@@ -248,11 +247,11 @@ class CheckSettingsHandler(BaseHandler, ABC):
 
 
 sys_mg_v4_urls = [
-    (r"/v4/app/opt_log/", LogV4Handler, {"handle_name": "PAAS-操作日志V4"}),
-    (r'/v4/sysconfig/settings/', AppSettingsHandler),
-    (r'/v4/sysconfig/check/', CheckSettingsHandler),
-    (r'/v4/authority/register/', AuthorityRegister),
-    (r"/are_you_ok/", LivenessProbe, {"handle_name": "MG-存活接口"})
+    (r"/v4/app/opt_log/", LogV4Handler, {"handle_name": "PAAS管理-操作日志V4"}),
+    (r'/v4/sysconfig/settings/', AppSettingsHandler, {"handle_name": "PAAS管理-系统设置", "method": ["ALL"]}),
+    (r'/v4/sysconfig/check/', CheckSettingsHandler, {"handle_name": "PAAS管理-系统设置检查", "method": ["ALL"]}),
+    (r'/v4/authority/register/', AuthorityRegister, {"handle_name": "PAAS管理-权限注册", "method": ["ALL"]}),
+    (r"/are_you_ok/", LivenessProbe)
 ]
 
 if __name__ == "__main__":

@@ -141,11 +141,11 @@ class RoleMenuHandler(BaseHandler):
         self.write(dict(code=0, msg='从角色中删除菜单成功'))
 
 
-menus_urls = [
-    (r"/v3/accounts/menus/", MenusHandler, {"handle_name": "权限中心-菜单管理"}),
-    (r"/v3/accounts/role_menu/", RoleMenuHandler, {"handle_name": "权限中心-菜单角色"})
-
-]
+# menus_urls = [
+#     (r"/v3/accounts/menus/", MenusHandler, {"handle_name": "权限中心-菜单管理"}),
+#     (r"/v3/accounts/role_menu/", RoleMenuHandler, {"handle_name": "权限中心-菜单角色"})
+#
+# ]
 
 if __name__ == "__main__":
     pass

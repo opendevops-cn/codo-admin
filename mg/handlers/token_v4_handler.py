@@ -134,7 +134,7 @@ class TokenHandler(BaseHandler, ABC):
 
 
 token_urls = [
-    (r"/v4/token/", TokenHandler, {"handle_name": "权限中心-令牌管理"}),
+    (r"/v4/token/", TokenHandler, {"handle_name": "权限中心-令牌管理", "method": ["ALL"]}),
 
 ]
 

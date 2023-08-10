@@ -161,11 +161,11 @@ class RoleUserAllHandler(BaseHandler):
         return self.write(dict(code=0, msg='获取成功', data=role_list))
 
 
-roles_urls = [
-    (r"/v3/accounts/role/", RoleHandler, {"handle_name": "角色列表"}),
-    (r"/v3/accounts/role_user/", RoleUserHandler, {"handle_name": "通过角色查询角色内用户", "handle_status": "y"}),
-    (r"/v3/accounts/all_role_user/", RoleUserAllHandler, {"handle_name": "查询所有用户角色", "handle_status": "y"})
-]
+# roles_urls = [
+#     (r"/v3/accounts/role/", RoleHandler, {"handle_name": "角色列表"}),
+#     (r"/v3/accounts/role_user/", RoleUserHandler, {"handle_name": "通过角色查询角色内用户", "handle_status": "y"}),
+#     (r"/v3/accounts/all_role_user/", RoleUserAllHandler, {"handle_name": "查询所有用户角色", "handle_status": "y"})
+# ]
 
 if __name__ == "__main__":
     pass

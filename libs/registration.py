@@ -16,7 +16,8 @@ from settings import settings
 if configs.can_import: configs.import_dict(**settings)
 client = AcsClient()
 
-uri = "/api/mg/v3/accounts/authority/register/"
+# uri = "/api/mg/v3/accounts/authority/register/"
+uri = "/api/p/v4/authority/register/"
 
 menu_list = [
     {
@@ -31,10 +32,10 @@ menu_list = [
     }, {
         "name": "MGapplist",
         "details": "应用列表"
-    },{
+    }, {
         "name": "MGbusiness",
         "details": "业务列表"
-    },{
+    }, {
         "name": "MGmenus",
         "details": "菜单列表"
     }, {
@@ -100,7 +101,7 @@ component_list = [
     }, {
         "name": "del_token_a",
         "details": "权限中心-删除令牌"
-    },{
+    }, {
         "name": "edit_app_btn",
         "details": "权限中心 应用列表 编辑按钮"
     }, {
@@ -197,7 +198,7 @@ role_list = []
 
 method_dict = dict(
     ALL="管理",
-    GET="只读",
+    GET="查看",
     # POST="添加",
     # PATCH="修改",
     # DELETE="删除"
@@ -213,11 +214,13 @@ def registration_to_paas():
     ))
     if func_info.status_code == 200:
         temp_func_list = func_info.json().get('data')
-        func_list.append(dict(method_type='ALL', name=f"{app_code}-管理员", uri=f"/api/{app_code}/*"))
-        func_list.append(dict(method_type='GET', name=f"{app_code}-查看所有", uri=f"/api/{app_code}/*"))
+        # func_list.append(dict(method_type='ALL', name=f"{app_code}-管理员", uri=f"/api/{app_code}/*"))
+        # func_list.append(dict(method_type='GET', name=f"{app_code}-查看所有", uri=f"/api/{app_code}/*"))
         for f in temp_func_list:
             if 'name' not in f or f.get('name') == '暂无': continue
             for m, v in method_dict.items():
+                if f.get('method') and m not in f.get('method'):
+                    continue
                 func = dict(method_type=m, name=f"{v}-{f['name']}", uri=f"/api/{app_code}{f.get('url')}")
                 if f.get('status') == 'y':  func['status'] = '0'
                 func_list.append(func)

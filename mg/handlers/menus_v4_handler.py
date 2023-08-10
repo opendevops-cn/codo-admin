@@ -38,6 +38,13 @@ class MenusHandler(BaseHandler, ABC):
         self.write(res)
 
 
+class MenuListHandler(BaseHandler, ABC):
+    def get(self, *args, **kwargs):
+        res = get_menu_list_for_api(**self.params)
+
+        return self.write(res)
+
+
 class RoleMenuHandler(BaseHandler, ABC):
     """
     菜单和角色关联
@@ -90,8 +97,9 @@ class RoleMenuHandler(BaseHandler, ABC):
 
 
 menus_v4_urls = [
-    (r"/v4/menus/", MenusHandler, {"handle_name": "权限中心-菜单管理"}),
-    (r"/v4/role_menu/", RoleMenuHandler, {"handle_name": "权限中心-菜单角色"})
+    (r"/v4/menus/", MenusHandler, {"handle_name": "权限中心-菜单管理", "method": ["ALL"]}),
+    (r"/v4/menus/list/", MenuListHandler, {"handle_name": "权限中心-查看菜单列表", "method": ["GET"]}),
+    (r"/v4/role_menu/", RoleMenuHandler, {"handle_name": "权限中心-菜单角色管理", "method": ["ALL"]})
 
 ]
 

@@ -196,10 +196,10 @@ class UserTreeHandler(BaseHandler):
             return self.write(dict(code=0, msg='获取用户Tree失败', data=_tree[0]["children"]))
 
 
-user_mg_urls = [
-    (r"/v3/accounts/user/", UserHandler, {"handle_name": "权限中心-用户管理"}),
-    (r"/v3/accounts/user/tree/", UserTreeHandler, {"handle_name": "权限中心-用户树"}),
-]
+# user_mg_urls = [
+#     (r"/v3/accounts/user/", UserHandler, {"handle_name": "权限中心-用户管理"}),
+#     (r"/v3/accounts/user/tree/", UserTreeHandler, {"handle_name": "权限中心-用户树"}),
+# ]
 
 if __name__ == "__main__":
     pass

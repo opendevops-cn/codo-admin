@@ -38,7 +38,7 @@ class FavoritesHandler(BaseHandler, ABC):
 
 
 favorites_urls = [
-    (r"/v4/favorites/", FavoritesHandler, {"handle_name": "PAAS-公用收藏接口"}),
+    (r"/v4/favorites/", FavoritesHandler, {"handle_name": "PAAS-基础功能-公用收藏接口", "method": ["ALL"]}),
 
 ]
 

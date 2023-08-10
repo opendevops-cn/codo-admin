@@ -96,9 +96,9 @@ class CDNAuth(BaseHandler):
 
 
 storage_urls = [
-    (r"/v1/storage/file/private/", StoragePrivate, {"handle_name": "存储管理-私有"}),
-    (r"/v1/storage/file/public/", StoragePublic, {"handle_name": "存储管理-公共读"}),
-    (r"/v1/cdn/auth/", CDNAuth, {"handle_name": "CDN鉴权"})
+    (r"/v4/storage/file/private/", StoragePrivate, {"handle_name": "PAAS-基础功能-存储管理-私有", "method": ["ALL"]}),
+    (r"/v4/storage/file/public/", StoragePublic, {"handle_name": "PAAS-基础功能-存储管理-公共读", "method": ["ALL"]}),
+    (r"/v4/cdn/auth/", CDNAuth, {"handle_name": "PAAS-基础功能-CDN鉴权", "method": ["GET"]})
 ]
 if __name__ == "__main__":
     pass

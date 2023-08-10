@@ -111,8 +111,8 @@ class RoleCompHandler(BaseHandler):
 
 
 comp_v4_urls = [
-    (r"/v4/components/", ComponentsHandler, {"handle_name": "权限中心-组件管理"}),
-    (r"/v4/role_comp/", RoleCompHandler, {"handle_name": "权限中心-组件角色"}),
+    (r"/v4/components/", ComponentsHandler, {"handle_name": "权限中心-组件管理", "method": ["ALL"]}),
+    (r"/v4/role_comp/", RoleCompHandler, {"handle_name": "权限中心-组件角色", "method": ["ALL"]}),
 ]
 
 if __name__ == "__main__":

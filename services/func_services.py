@@ -23,6 +23,7 @@ def _get_value(value: str = None):
         Functions.id == value,
         Functions.details.like(f'%{value}%'),
         Functions.func_name.like(f'%{value}%'),
+        Functions.uri.like(f'%{value}%'),
         Functions.app_code == value
     )
 

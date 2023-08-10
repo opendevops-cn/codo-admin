@@ -15,7 +15,7 @@ from mg.handlers.business_v4_handler import biz_v4_mg_urls
 from mg.handlers.token_v4_handler import token_urls
 from mg.handlers.login_link_handler import link_v4_urls
 from mg.handlers.sys_mg_v4_handler import sys_mg_v4_urls
-from mg.handlers.custom_notice_handler import custom_notice_urls
+# from mg.handlers.custom_notice_handler import custom_notice_urls
 from mg.handlers.storage_handler import storage_urls
 from mg.handlers.favorites_v4_handler import favorites_urls
 
@@ -37,6 +37,6 @@ urls.extend(biz_mg_urls)
 urls.extend(biz_v4_mg_urls)
 urls.extend(token_urls)
 urls.extend(sys_mg_v4_urls)
-urls.extend(custom_notice_urls)
+# urls.extend(custom_notice_urls)
 urls.extend(storage_urls)
 urls.extend(favorites_urls)

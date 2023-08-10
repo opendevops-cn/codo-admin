@@ -115,9 +115,9 @@ class RoleFuncHandler(BaseHandler, ABC):
 
 
 func_v4_urls = [
-    (r"/v4/role_func/", RoleFuncHandler, {"handle_name": "权限中心-API角色"}),
-    (r"/v4/func/", FuncHandler, {"handle_name": "权限中心-API管理"}),
-    (r"/v4/func/list/", FuncListHandler, {"handle_name": "权限中心-API列表"}),
+    (r"/v4/role_func/", RoleFuncHandler, {"handle_name": "权限中心-接口权限角色管理", "method": ["ALL"]}),
+    (r"/v4/func/", FuncHandler, {"handle_name": "权限中心-接口权限管理", "method": ["ALL"]}),
+    (r"/v4/func/list/", FuncListHandler, {"handle_name": "权限中心-查看接口权限列表", "method": ["GET"]}),
 
 ]
 

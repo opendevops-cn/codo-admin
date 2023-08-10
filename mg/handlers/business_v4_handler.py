@@ -162,9 +162,9 @@ class BusinessListHandler(BaseHandler, ABC):
 
 
 biz_v4_mg_urls = [
-    (r"/v4/biz/", BusinessHandler, {"handle_name": "权限中心-业务管理"}),
+    (r"/v4/biz/", BusinessHandler, {"handle_name": "权限中心-业务管理", "method": ["ALL"]}),
     # (r"/v4/tenant/", TenantHandler, {"handle_name": "权限中心-租户管理"}),
-    (r"/v4/biz/list/", BusinessListHandler, {"handle_name": "权限中心-业务列表"}),
+    (r"/v4/biz/list/", BusinessListHandler, {"handle_name": "PAAS基础功能-查看业务列表和切换", "method": ["GET"]}),
     # (r"/v4/biz/tree/", BusinessTreeHandler, {"handle_name": "权限中心-业务树"}),
 ]
 if __name__ == "__main__":

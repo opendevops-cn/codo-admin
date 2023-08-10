@@ -194,7 +194,7 @@ def get_biz_list_v2(**params):
 
 
 biz_mg_urls = [
-    (r"/v1/base/biz/", BusinessHandler, {"handle_name": "权限中心-租户管理"}),
+    (r"/v1/base/biz/", BusinessHandler, {"handle_name": "权限中心-租户管理-待废弃", "method": ["ALL"]}),
 ]
 if __name__ == "__main__":
     pass

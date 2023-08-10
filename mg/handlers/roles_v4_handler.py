@@ -61,6 +61,14 @@ class RoleHandler(BaseHandler, ABC):
         return self.write(dict(code=0, msg='角色编辑成功'))
 
 
+class RoleListHandler(BaseHandler, ABC):
+
+    def get(self, *args, **kwargs):
+        res = get_role_list_for_api(**self.params)
+
+        return self.write(res)
+
+
 class RoleUserHandler(BaseHandler, ABC):
     _thread_pool = ThreadPoolExecutor(5)
 
@@ -145,14 +153,14 @@ class RoleSyncHandler(BaseHandler, ABC):
 
 
 roles_v4_urls = [
-    (r"/v4/role/list/", RoleHandler, {"handle_name": "权限中心-角色列表对外查询"}),
-    (r"/v3/accounts/role/", RoleHandler, {"handle_name": "角色列表"}),
-    (r"/v4/role/", RoleHandler, {"handle_name": "权限中心-角色管理V4"}),
-    (r"/v4/role/sync/", RoleSyncHandler, {"handle_name": "权限中心-角色权限同步"}),
-    (r"/v4/role_user/", RoleUserHandler, {"handle_name": "权限中心-通过角色查用户", "handle_status": "y"}),
+    (r"/v4/role/list/", RoleListHandler, {"handle_name": "PAAS-基础功能-查看角色列表", "method": ["GET"]}),
+    (r"/v3/accounts/role/", RoleHandler, {"handle_name": "角色列表-待销毁", "method": ["ALL"]}),
+    (r"/v4/role/", RoleHandler, {"handle_name": "权限中心-角色管理V4", "method": ["ALL"]}),
+    (r"/v4/role/sync/", RoleSyncHandler, {"handle_name": "权限中心-角色权限同步", "method": ["ALL"]}),
+    (r"/v4/role_user/", RoleUserHandler, {"handle_name": "权限中心-角色用户管理", "method": ["ALL"]}),
     # TODO 暂时保留
-    (r"/v3/accounts/all_role_user/", RoleUserAllHandler, {"handle_name": "查询所有用户角色", "handle_status": "y"}),
-    (r"/v4/all_role_user/", RoleUserAllHandler, {"handle_name": "权限中心-查询所有用户角色V4", "handle_status": "y"})
+    (r"/v3/accounts/all_role_user/", RoleUserAllHandler, {"handle_name": "查询所有用户角色-待废弃", "method": ["GET"]}),
+    (r"/v4/all_role_user/", RoleUserAllHandler, {"handle_name": "权限中心-查询所有用户角色V4", "method": ["GET"]})
 ]
 
 if __name__ == "__main__":
