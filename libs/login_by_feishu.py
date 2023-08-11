@@ -9,6 +9,7 @@ Desc    : 飞书登录验证
 import json
 import urllib.parse
 import requests
+from loguru import logger
 from shortuuid import uuid
 from websdk2.cache_context import cache_conn
 from websdk2.db_context import DBContextV2 as DBContext
@@ -141,5 +142,5 @@ def with_protocol_feishu(url_code, query_params):
     redis_conn.set(f"feishu_fs_redirect_uri___{state}", url_dict.get(url_code).get('login_url'), ex=120)
 
     result = f'https://passport.feishu.cn/accounts/auth_login/oauth2/authorize?client_id={client_id}&response_type=code&{redirect_uri}&state={state}'
-
+    logger.warning(result)
     return result

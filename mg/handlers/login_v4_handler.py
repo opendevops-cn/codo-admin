@@ -237,9 +237,9 @@ class AuthorizationHandler(BaseHandler, ABC):
 class LoginMHandler(RequestHandler, ABC):
     def get(self, url_code):
         params = {k: self.get_argument(k) for k in self.request.arguments}
-        # 第一步 https://applink.feishu.cn/client/web_url/open?url=http://10.241.0.40:8888/api/p/v4/m/test6666
+        # 第一步 https://applink.feishu.cn/client/web_url/open?url=http://10.241.0.40:8888/api/acc/m/test6666
         # 第二 f'https://passport.feishu.cn/accounts/auth_login/oauth2/authorize?client_id={client_id}&response_type=code&{redirect_uri}&state={state}'
-        print(with_protocol_feishu(url_code, params))
+        # print(with_protocol_feishu(url_code, params))
         return self.redirect(with_protocol_feishu(url_code, params))
 
 
@@ -281,6 +281,7 @@ class LoginFSHandler(RequestHandler, ABC):
         feishu_login_dict = dict(code=code, fs_redirect_uri=fs_redirect_uri, fs_conf=fs_conf)
 
         user_info = yield self.feishu_authentication(**feishu_login_dict)
+        print(user_info)
 
         if not user_info:
             return self.write(dict(code=-4, msg='账号异常'))

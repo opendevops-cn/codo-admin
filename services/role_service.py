@@ -100,9 +100,11 @@ def get_all_user_list_for_role(**kwargs):
 
 def role_sync_all():
     from libs.sync_user_verift_v4 import MyVerify
+    from services.biz_service import sync_biz_role_user
     obj = MyVerify()
     obj.sync_all_permission()
     get_all_user_list_for_role()
+    sync_biz_role_user()
     # 同步角色对应的用户 生成缓存字典
     # RBAC权限生成ACL到ETCD
     # 推送业务角色信息到数据库和缓存
