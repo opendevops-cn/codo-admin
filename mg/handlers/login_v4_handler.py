@@ -101,6 +101,8 @@ class LoginHandler(RequestHandler, ABC):
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
         print(data)
+        from loguru import logger
+
         username = data.get('username')
         password = data.get('password')
         dynamic = data.get('dynamic')
@@ -134,7 +136,7 @@ class LoginHandler(RequestHandler, ABC):
             if not username or not password:
                 return self.write(dict(code=-1, msg='账号密码不能为空'))
             user_info = self.base_authentication(username=username, password=password)
-
+        logger.error(data,user_info)
         if not user_info:
             return self.write(dict(code=-4, msg='账号异常'))
 
