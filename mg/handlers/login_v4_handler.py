@@ -129,7 +129,8 @@ class LoginHandler(RequestHandler, ABC):
             login_dict = dict(username=username, password=ucenter_password, uc_conf=uc_conf)
             user_info = yield self.other_authentication(**login_dict)
 
-        if not login_type or not user_info or login_type == 'base':
+        if not login_type and not user_info or login_type == 'base':
+            # TODO 这段逻辑
             if not username or not password:
                 return self.write(dict(code=-1, msg='账号密码不能为空'))
             user_info = self.base_authentication(username=username, password=password)
