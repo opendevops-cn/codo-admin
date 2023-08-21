@@ -100,14 +100,14 @@ class LoginHandler(RequestHandler, ABC):
     @gen.coroutine
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        print(data)
+        print('data', data)
         from loguru import logger
 
         username = data.get('username')
         password = data.get('password')
         dynamic = data.get('dynamic')
         c_url = data.get('c_url', '/')
-        login_type = data.get('login_type', 'ucenter')
+        login_type = data.get('login_type')
 
         uc_conf = self.settings.get('uc_conf')
         user_info = None
@@ -131,12 +131,12 @@ class LoginHandler(RequestHandler, ABC):
             login_dict = dict(username=username, password=ucenter_password, uc_conf=uc_conf)
             user_info = yield self.other_authentication(**login_dict)
 
-        if not login_type and not user_info or login_type == 'base':
-            # TODO 这段逻辑
+        if not login_type or login_type == 'base':
+            # 这段逻辑 是给一个保底策略
             if not username or not password:
                 return self.write(dict(code=-1, msg='账号密码不能为空'))
             user_info = self.base_authentication(username=username, password=password)
-        logger.error(f"{json.dumps(data)}, {user_info}")
+
         if not user_info:
             return self.write(dict(code=-4, msg='账号异常'))
 

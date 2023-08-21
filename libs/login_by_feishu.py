@@ -35,7 +35,7 @@ class FeiShuAuth:
             user_info = session.query(Users).filter(Users.fs_id == res.get('user_id'),
                                                     Users.status != '10').first()
 
-        self.redis_conn.set(f"feishu_login_cache___{self.code}", res.get('user_id'), ex=120)
+        self.redis_conn.set(f"feishu_login_cache___{self.code}", res.get('user_id'), ex=180)
         return user_info
 
     def get_cache_info(self):
