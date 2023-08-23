@@ -23,12 +23,13 @@ class MenusHandler(BaseHandler, ABC):
 
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-
+        data['pid'] = 1
         res = opt_obj.handle_add(data)
         self.write(res)
 
     def put(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
+        data['pid'] = 1
         res = opt_obj.handle_update(data)
         self.write(res)
 
