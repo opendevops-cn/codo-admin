@@ -11,6 +11,7 @@ import base64
 from typing import *
 from abc import ABC
 from shortuuid import uuid
+from loguru import logger
 from libs.base_handler import BaseHandler
 from tornado.web import RequestHandler, HTTPError
 from concurrent.futures import ThreadPoolExecutor
@@ -214,7 +215,7 @@ class AuthorizationHandler(BaseHandler, ABC):
                             _role_list.extend(role.role_subs)
 
                     _role_list = set(_role_list)
-                    print(_role_list)
+                    # print(_role_list)
                     __menus = session.query(Menus.menu_name).outerjoin(RoleMenus, Menus.id == RoleMenus.menu_id).filter(
                         RoleMenus.role_id.in_(_role_list)).all()
 
@@ -227,9 +228,8 @@ class AuthorizationHandler(BaseHandler, ABC):
             ###
             __user = session.query(Users.avatar).filter(Users.id == self.request_user_id).first()
             # if not __user: return self.write(dict(code=-2, msg='当前账户状态错误'))
-            if __user:
-                avatar = __user[0]
-        print(page_data, self.request_username, self.request_user_id)
+            if __user: avatar = __user[0]
+        logger.error(f"{page_data}, {self.request_username},{self.request_user_id} super {self.request_is_superuser}")
         data = dict(rules=dict(page=page_data, component=component_data), username=self.request_username,
                     nickname=self.request_nickname, avatar=avatar)
         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))
