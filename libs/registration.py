@@ -21,59 +21,67 @@ uri = "/api/p/v4/authority/register/"
 
 menu_list = [
     {
-        "name": "MGauthoritycenter",
-        "details": "权限中心"
+        "name": "MGauthority",
+        "details": "权限-权限管理"
     }, {
         "name": "MGuserlist",
-        "details": "用户列表"
+        "details": "权限-用户列表"
     }, {
         "name": "MGtokenlist",
-        "details": "令牌列表"
+        "details": "权限-令牌列表"
+    }, {
+        "name": "MGLinklist",
+        "details": "权限-免密链接"
     }, {
         "name": "MGapplist",
-        "details": "应用列表"
+        "details": "权限-应用列表"
     }, {
         "name": "MGbusiness",
-        "details": "业务列表"
+        "details": "权限-业务管理列表"
     }, {
         "name": "MGmenus",
-        "details": "菜单列表"
+        "details": "权限-菜单列表"
     }, {
         "name": "MGcomponents",
-        "details": "前端组件"
+        "details": "权限-前端组件"
     }, {
         "name": "MGfunctions",
-        "details": "权限列表"
+        "details": "权限-权限列表"
     }, {
         "name": "MGrole",
-        "details": "角色管理"
-    }, {
-        "name": "MGappfuncs",
-        "details": "应用权限"
+        "details": "权限-角色管理"
     },
     {
-        "name": "MGappmenus",
-        "details": "应用菜单"
+        "name": "systeMmanage",
+        "details": "管理后台-平台管理"
     },
     {
-        "name": "MGappcomponents",
-        "details": "应用组件"
+        "name": "systemconf",
+        "details": "管理后台-平台配置"
     },
     {
-        "name": "noticeCenter",
-        "details": "通知中心"
+        "name": "systemEmail",
+        "details": "管理后台-邮件设置"
     },
     {
-        "name": "noticeTemplate",
-        "details": "通知模板"
+        "name": "systemLdap",
+        "details": "管理后台-LDAP设置"
     },
     {
-        "name": "noticeGroup",
-        "details": "通知组"
+        "name": "systemBase",
+        "details": "管理后台-基础设置"
     },
     {
-        "name": "noticeConf",
-        "details": "通知配置"
+        "name": "systemFeishu",
+        "details": "管理后台-飞书设置"
+    },
+    {
+        "name": "systemAudit",
+        "details": "管理后台-审计"
+    },
+    {
+        "name": "systemAuditLog",
+        "details": "管理后台-审计日志"
     },
 ]
 component_list = [
@@ -206,7 +214,7 @@ method_dict = dict(
 
 
 def registration_to_paas():
-    app_code = "mg"
+    app_code = "cmg"
     api_info_url = f"/api/{app_code}/v1/probe/meta/urls/"
     func_info = client.do_action_v2(**dict(
         method='GET',
@@ -221,7 +229,7 @@ def registration_to_paas():
             for m, v in method_dict.items():
                 if f.get('method') and m not in f.get('method'):
                     continue
-                func = dict(method_type=m, name=f"{v}-{f['name']}", uri=f"/api/{app_code}{f.get('url')}")
+                func = dict(method_type=m, name=f"{v}-{f['name']}", uri=f"/api/mg{f.get('url')}")
                 if f.get('status') == 'y':  func['status'] = '0'
                 func_list.append(func)
     body = {

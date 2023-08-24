@@ -198,6 +198,7 @@ class AuthorizationHandler(BaseHandler, ABC):
         page_data, component_data, avatar = {'all': False}, {'all': False}, ''
 
         with DBContext('r') as session:
+            # print(self.request_is_superuser,self.request_user_id,self.request_username)
             if self.request_is_superuser:
                 components_info = session.query(Components.name).all()
                 page_data['all'] = True

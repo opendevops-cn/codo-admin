@@ -129,14 +129,13 @@ class AuthorityRegister(BaseHandler):
 
     def register_menu(self, data):
         for d in data:
-            status = d.get('status', '0')
             menu_name = d.get('name')
             details = d.get('details', '')[0:250]
             if not menu_name: continue
             with DBContext('w', None, True) as session:
                 try:
                     session.add(insert_or_update(Menus, f"menu_name='{menu_name}' and app_code='{self.app_code}'",
-                                                 app_code=self.app_code, status=status, details=details,
+                                                 app_code=self.app_code, details=details,
                                                  menu_name=menu_name))
                 except exc.IntegrityError as e:
                     print(e)
