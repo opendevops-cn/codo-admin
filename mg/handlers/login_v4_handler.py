@@ -101,7 +101,7 @@ class LoginHandler(RequestHandler, ABC):
     @gen.coroutine
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-
+        # print(data)
         username = data.get('username')
         password = data.get('password')
         dynamic = data.get('dynamic')
@@ -115,20 +115,24 @@ class LoginHandler(RequestHandler, ABC):
             feishu_login_dict = dict(code=data.get('code'), fs_redirect_uri=data.get('fs_redirect_uri'),
                                      fs_conf=fs_conf)
             user_info = yield self.feishu_authentication(**feishu_login_dict)
-        elif login_type == 'ldap':
+
+        if login_type == 'ldap':
             ldap_login_data = yield self.ldap_authentication(username, password)
             if isinstance(ldap_login_data, dict):
                 return self.write(ldap_login_data)
             else:
                 user_info = ldap_login_data
+            # 如果 ldap 没启用 使用ucenter
+            if not get_sys_conf_dict_for_me(**dict(category='ldap')): login_type = 'ucenter'
 
-        elif login_type == 'ucenter':
+        if login_type == 'ucenter':
             if not username or not password:
                 return self.write(dict(code=-1, msg='账号密码不能为空'))
             ucenter_password = base64.b64decode(password).decode("utf-8")
             ucenter_password = base64.b64decode(ucenter_password).decode("utf-8")
             login_dict = dict(username=username, password=ucenter_password, uc_conf=uc_conf)
             user_info = yield self.other_authentication(**login_dict)
+            if not user_info: login_type = None
 
         if not login_type or login_type == 'base':
             # 这段逻辑 是给一个保底策略
