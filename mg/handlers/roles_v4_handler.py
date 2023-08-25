@@ -15,8 +15,8 @@ from sqlalchemy.exc import IntegrityError
 from libs.base_handler import BaseHandler
 from websdk2.cache_context import cache_conn
 from websdk2.db_context import DBContextV2 as DBContext
-from services.role_service import get_role_list_for_api, opt_obj, get_users_for_role, get_all_user_list_for_role, \
-    role_sync_all
+from services.role_service import get_role_list_for_api, get_normal_role_list_for_api, get_base_role_list_for_api, \
+    opt_obj, get_users_for_role, get_all_user_list_for_role, role_sync_all
 from models.authority import Roles, UserRoles, RolesComponents, RoleMenus, RoleApps
 
 
@@ -64,7 +64,15 @@ class RoleHandler(BaseHandler, ABC):
 class RoleListHandler(BaseHandler, ABC):
 
     def get(self, *args, **kwargs):
-        res = get_role_list_for_api(**self.params)
+        res = get_normal_role_list_for_api(**self.params)
+
+        return self.write(res)
+
+
+class RoleBaseListHandler(BaseHandler, ABC):
+
+    def get(self, *args, **kwargs):
+        res = get_base_role_list_for_api(**self.params)
 
         return self.write(res)
 
@@ -153,7 +161,8 @@ class RoleSyncHandler(BaseHandler, ABC):
 
 
 roles_v4_urls = [
-    (r"/v4/role/list/", RoleListHandler, {"handle_name": "PAAS-基础功能-查看角色列表", "method": ["GET"]}),
+    (r"/v4/role/list/", RoleListHandler, {"handle_name": "PAAS-基础功能-查看常规角色列表", "method": ["GET"]}),
+    (r"/v4/role/base_list/", RoleBaseListHandler, {"handle_name": "PAAS-基础功能-查看所有基础角色", "method": ["GET"]}),
     (r"/v3/accounts/role/", RoleHandler, {"handle_name": "角色列表-待销毁", "method": ["ALL"]}),
     (r"/v4/role/", RoleHandler, {"handle_name": "权限中心-角色管理V4", "method": ["ALL"]}),
     (r"/v4/role/sync/", RoleSyncHandler, {"handle_name": "权限中心-角色权限同步", "method": ["ALL"]}),

@@ -42,6 +42,26 @@ def get_role_list_for_api(**params) -> dict:
     return dict(code=0, msg='获取成功', data=page.items, count=page.total)
 
 
+def get_normal_role_list_for_api(**params) -> dict:
+    value = params.get('searchValue') if "searchValue" in params else params.get('searchVal')
+    filter_map = params.pop('filter_map') if "filter_map" in params else {}
+    if 'biz_id' in filter_map: filter_map.pop('biz_id')  # 暂时不隔离
+    if 'page_size' not in params: params['page_size'] = 300  # 默认获取到全部数据
+    with DBContext('r') as session:
+        page = paginate(session.query(Roles).filter(Roles.role_type == 'normal').filter(
+            _get_value(value)).filter_by(**filter_map), **params)
+
+    return dict(code=0, msg='获取成功', data=page.items, count=page.total)
+
+
+def get_base_role_list_for_api(**params) -> dict:
+    params['page_size'] = 300  # 默认获取到全部数据
+    with DBContext('r') as session:
+        page = paginate(session.query(Roles).filter(Roles.role_type == 'base'), **params)
+
+    return dict(code=0, msg='获取成功', data=page.items, count=page.total)
+
+
 # 通过角色查找用户
 def get_users_for_role(**kwargs) -> dict:
     role_id = kwargs.get('role_id')
