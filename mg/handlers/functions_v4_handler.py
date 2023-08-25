@@ -24,10 +24,12 @@ class FuncHandler(BaseHandler, ABC):
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
         res = opt_obj.handle_add(data)
+        data['menu_id'] = 1
         self.write(res)
 
     def put(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
+        data['menu_id'] = 1
         res = opt_obj.handle_update(data)
         self.write(res)
 
