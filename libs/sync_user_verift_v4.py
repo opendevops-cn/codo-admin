@@ -138,11 +138,11 @@ class MyVerify:
             key = f"{self.crbac_prefix}{func_id}{match_key}"
             self.etcd_client.put(key, json.dumps(value), lease=ttl_id)
 
-    @deco1(RedisLock("async_all_api_permission_redis_lock_key"))
+    @deco1(RedisLock("async_all_api_permission_v4_redis_lock_key"))
     def sync_all_api_permission(self):
         self.sync_all_permission()
 
-    @deco(RedisLock("async_diff_api_permission_redis_lock_key"))
+    @deco(RedisLock("async_diff_api_permission_v4_redis_lock_key"))
     def sync_diff_api_permission(self):
         ttl_id = now_timestamp()
         logger.info(f'差异同步权限到ETCD start {ttl_id} {datetime.datetime.now()}')

@@ -214,7 +214,7 @@ method_dict = dict(
 
 
 def registration_to_paas():
-    app_code = "cmg"
+    app_code = "mg"
     api_info_url = f"/api/{app_code}/v1/probe/meta/urls/"
     func_info = client.do_action_v2(**dict(
         method='GET',
@@ -229,7 +229,7 @@ def registration_to_paas():
             for m, v in method_dict.items():
                 if f.get('method') and m not in f.get('method'):
                     continue
-                func = dict(method_type=m, name=f"{v}-{f['name']}", uri=f"/api/mg{f.get('url')}")
+                func = dict(method_type=m, name=f"{v}-{f['name']}", uri=f"/api/{app_code}{f.get('url')}")
                 if f.get('status') == 'y':  func['status'] = '0'
                 func_list.append(func)
     body = {
