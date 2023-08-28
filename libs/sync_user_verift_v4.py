@@ -209,6 +209,7 @@ class MyVerify:
 
         client.put(f'{self.token_block_prefix}block', json.dumps(block_dict), lease=ttl_id)
 
+
 def get_all_user():
     def md5hex(sign):
         md5 = hashlib.md5()  # 创建md5加密对象

@@ -66,6 +66,7 @@ class UserHandler(BaseHandler, ABC):
         data = json.loads(self.request.body.decode("utf-8"))
         if 'last_login' in data: data.pop('last_login')
         # if 'username' in data: data.pop('username')
+        if 'fs_open_id' not in data: data['fs_open_id'] = ''
         res = opt_obj.handle_update(data)
         self.write(res)
 
