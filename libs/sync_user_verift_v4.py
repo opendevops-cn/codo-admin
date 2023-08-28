@@ -70,7 +70,7 @@ class MyVerify:
         if "etcds" not in settings: raise SystemExit('找不到ETCD配置')
         self.etcd_dict = settings.get('etcds').get('DEFAULT_ETCD_KEY')
         self.etcd_prefix = settings.get('etcd_prefix', '/')
-        self.crbac_prefix = f"{self.etcd_prefix}codorbac1/"
+        self.crbac_prefix = f"{self.etcd_prefix}codorbac/"
         self.token_block_prefix = f"{self.etcd_prefix}tokenblock/"
         self.is_superuser = is_superuser
         self.method_list = ["GET", "POST", "PATCH", "DELETE", "PUT", "ALL"]
