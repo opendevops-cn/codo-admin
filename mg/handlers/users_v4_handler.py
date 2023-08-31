@@ -20,7 +20,7 @@ from libs.base_handler import BaseHandler
 from websdk2.db_context import DBContextV2 as DBContext
 from models.authority import Users, UserRoles
 from services.sys_service import init_email
-from services.user_services import opt_obj, get_user_list_v2, get_user_list_v3
+from services.user_services import opt_obj, get_user_list_v2, get_user_list_v3, get_user_noc_addr
 
 
 class UserHandler(BaseHandler, ABC):
@@ -155,8 +155,25 @@ class ResetPasswordHandler(BaseHandler, ABC):
         return self.write(dict(code=0, msg='重置密码成功，新密码已经发送到邮箱', data=md5_password))
 
 
+class UserAddrHandler(BaseHandler, ABC):
+    """
+    users_str  可以是用户名  昵称  id
+    roles_str   id
+    """
+
+    def get(self):
+        users_str = self.get_argument('users_str', default=None, strip=True)
+        roles_str = self.get_argument('roles_str', default=None, strip=True)
+        if not users_str and not roles_str:
+            return self.write(dict(code=-1, msg='参数不能为空'))
+
+        res = get_user_noc_addr(users_str, roles_str)
+        self.write(res)
+
+
 user_v4_mg_urls = [
     (r"/v4/user/list/", UserListHandler, {"handle_name": "PAAS-基础功能-查看用户列表", "method": ["GET"]}),
+    (r"/v4/user/send_addr/", UserAddrHandler, {"handle_name": "PAAS-基础功能-查看用户联系方式", "method": ["GET"]}),
     (r"/v4/reset_mfa/", ResetMFAHandler, {"handle_name": "PAAS管理-重置二次认证", "method": ["ALL"]}),
     (r"/v4/reset_pw/", ResetPasswordHandler, {"handle_name": "PAAS管理-重置密码", "method": ["ALL"]}),
     (r"/v3/accounts/user/", UserHandler, {"handle_name": "权限中心-用户管理-待废弃", "method": ["ALL"]}),
