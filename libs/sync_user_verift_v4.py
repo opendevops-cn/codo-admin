@@ -37,7 +37,7 @@ except:
 def deco(cls, release=False):
     def _deco(func):
         def __deco(*args, **kwargs):
-            if not cls.get_lock(cls, key_timeout=120, func_timeout=60): return False
+            if not cls.get_lock(cls, key_timeout=300, func_timeout=60): return False
             try:
                 return func(*args, **kwargs)
             finally:
