@@ -202,7 +202,6 @@ class AuthorizationHandler(BaseHandler, ABC):
         page_data, component_data, avatar = {'all': False}, {'all': False}, ''
 
         with DBContext('r') as session:
-            # print(self.request_is_superuser,self.request_user_id,self.request_username)
             if self.request_is_superuser:
                 components_info = session.query(Components.name).all()
                 page_data['all'] = True
@@ -234,7 +233,7 @@ class AuthorizationHandler(BaseHandler, ABC):
             __user = session.query(Users.avatar).filter(Users.id == self.request_user_id).first()
             # if not __user: return self.write(dict(code=-2, msg='当前账户状态错误'))
             if __user: avatar = __user[0]
-        logger.error(f"{page_data}, {self.request_username},{self.request_user_id} super {self.request_is_superuser}")
+        # logger.error(f"{page_data}, {self.request_username},{self.request_user_id} super {self.request_is_superuser}")
         data = dict(rules=dict(page=page_data, component=component_data), username=self.request_username,
                     nickname=self.request_nickname, avatar=avatar)
         return self.write(dict(data=data, code=0, msg='获取前端权限成功'))

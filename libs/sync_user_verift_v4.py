@@ -281,3 +281,9 @@ def async_api_permission_v4():
     executor.submit(obj.sync_all_api_permission)
     executor.submit(sync_all_user_list_for_role)
     # executor.submit(obj.token_block_list)
+
+
+def async_user_center():
+    # 启用线程去同步用户
+    executor = ThreadPoolExecutor(max_workers=2)
+    executor.submit(sync_user_from_uc)
