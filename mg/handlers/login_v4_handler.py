@@ -66,11 +66,17 @@ class LoginHandler(RequestHandler, ABC):
         if not ldap_conf:
             return dict(code=-5, msg='请补全LDAP信息')
 
-        obj = LdapApi(ldap_conf.get(const.LDAP_SERVER_HOST), ldap_conf.get(const.LDAP_ADMIN_DN),
-                      ldap_conf.get(const.LDAP_ADMIN_PASSWORD), ldap_conf.get(const.LDAP_USE_SSL))
+        try:
+            obj = LdapApi(ldap_conf.get(const.LDAP_SERVER_HOST), ldap_conf.get(const.LDAP_ADMIN_DN),
+                          ldap_conf.get(const.LDAP_ADMIN_PASSWORD), ldap_conf.get(const.LDAP_USE_SSL))
 
-        ldap_pass_info = obj.ldap_auth_v3(username, password, ldap_conf.get(const.LDAP_SEARCH_BASE),
-                                          ldap_conf.get(const.LDAP_ATTRIBUTES), ldap_conf.get(const.LDAP_SEARCH_FILTER))
+            ldap_pass_info = obj.ldap_auth_v3(username, password, ldap_conf.get(const.LDAP_SEARCH_BASE),
+                                              ldap_conf.get(const.LDAP_ATTRIBUTES),
+                                              ldap_conf.get(const.LDAP_SEARCH_FILTER))
+        except Exception as err:
+            logger.error(f"LDAP信息出错 {err}")
+            return dict(code=-4, msg='LDAP信息出错')
+
         if not ldap_pass_info[0]:
             return dict(code=-4, msg='账号密码错误')
 
@@ -101,7 +107,7 @@ class LoginHandler(RequestHandler, ABC):
     @gen.coroutine
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        # print(data)
+        print(data)
         username = data.get('username')
         password = data.get('password')
         dynamic = data.get('dynamic')

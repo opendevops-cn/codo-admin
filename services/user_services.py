@@ -13,7 +13,8 @@ from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.sqlalchemy_pagination import paginate
 # from models.authority_model import Roles, UserRoles, Groups, UserGroups, GroupRoles
 from models.authority import Users, Roles, UserRoles
-from websdk2.model_utils import CommonOptView
+# from websdk2.model_utils import CommonOptView
+from libs.feature_model_utils import CommonOptView
 
 opt_obj = CommonOptView(Users)
 
@@ -108,62 +109,3 @@ def get_user_noc_addr(users_str: str, roles_str: str) -> dict:
 
     user_addr_info = {'tel': tel_list, 'email': email_list, 'dd_id': ddid_list, 'fs_id': fsid_list}
     return dict(code=0, msg='获取成功', data=user_addr_info)
-
-# def get_group_list_for_user(**kwargs):
-#     """获取用户的用户组"""
-#     user_id = kwargs.get('user_id')
-#     user_name = kwargs.get('user_name')
-#     if not user_id and not user_name:
-#         return 0, []
-#     dict_list = ['group_id', 'group_name']
-#     with DBContext('r') as session:
-#         if not user_id and user_name:
-#             user = session.query(Users.user_id).filter(Users.username == user_name).first()
-#             if not user:
-#                 return 0, []
-#             user_id = user[0]
-#         group_info = session.query(Groups.group_id, Groups.group_name).outerjoin(UserGroups,
-#                                                                                  Groups.group_id == UserGroups.group_id) \
-#             .outerjoin(Users, Users.user_id == UserGroups.user_id).filter(Users.user_id == user_id).all()
-#     queryset = [dict(zip(dict_list, msg)) for msg in group_info]
-#     count = len(queryset)
-#     return count, queryset
-#
-#
-# def get_role_list_for_user(**kwargs):
-#     """获取用户的角色"""
-#     user_id = kwargs.get('user_id')
-#     user_name = kwargs.get('user_name')
-#     if not user_id and not user_name:
-#         return 0, []
-#     dict_list = ['role_id', 'role_name']
-#     with DBContext('r') as session:
-#         if not user_id and user_name:
-#             user = session.query(Users.user_id).filter(Users.username == user_name).first()
-#             if not user:
-#                 return 0, []
-#             user_id = user[0]
-#
-#         role_info = session.query(Roles.role_id, Roles.role_name).outerjoin(UserRoles,
-#                                                                             Roles.role_id == UserRoles.role_id) \
-#             .outerjoin(Users, Users.user_id == UserRoles.user_id).filter(Users.user_id == user_id, Roles.status == '0',
-#                                                                          UserRoles.status == '0',
-#                                                                          Users.status == '0').all()
-#
-#         group_list = session.query(Groups.group_id, Groups.group_name).outerjoin(UserGroups,
-#                                                                                  Groups.group_id == UserGroups.group_id) \
-#             .outerjoin(Users, Users.user_id == UserGroups.user_id).filter(Users.user_id == user_id,
-#                                                                           Groups.status == '0',
-#                                                                           UserGroups.status == '0',
-#                                                                           Users.status == '0').all()
-#         group_list = [g[0] for g in group_list]
-#
-#         role_info.extend(session.query(Roles.role_id, Roles.role_name).outerjoin(GroupRoles,
-#                                                                                  Roles.role_id == GroupRoles.role_id) \
-#                          .outerjoin(Groups, Groups.group_id == GroupRoles.group_id).filter(
-#             Groups.group_id.in_(group_list), Groups.status == '0', Roles.status == '0', GroupRoles.status == '0').all())
-#
-#     role_info = list(set(role_info))
-#     queryset = [dict(zip(dict_list, msg)) for msg in role_info]
-#     count = len(queryset)
-#     return count, queryset

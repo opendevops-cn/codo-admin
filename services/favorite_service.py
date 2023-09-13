@@ -7,19 +7,13 @@ Date    : 2023年06月05日
 Desc    : 用户收藏
 """
 
-import json
-import datetime
-import time
-# from dateutil.relativedelta import relativedelta
-from sqlalchemy import or_, func
 from sqlalchemy.exc import IntegrityError
 from websdk2.db_context import DBContextV2 as DBContext
-from websdk2.model_utils import queryset_to_list, model_to_dict
-from websdk2.utils.pydantic_utils import sqlalchemy_to_pydantic, ValidationError, PydanticDel, BaseModel
+from libs.feature_pydantic_utils import sqlalchemy_to_pydantic, ValidationError, PydanticDel
 from websdk2.sqlalchemy_pagination import paginate
-from models.admin_model import FavoritesModel
+from models.paas_model import FavoritesModel
 
-PydanticFavorites = sqlalchemy_to_pydantic(FavoritesModel, exclude=['id'])  ### 排除自增ID
+PydanticFavorites = sqlalchemy_to_pydantic(FavoritesModel, exclude=['id'])  # 排除自增ID
 PydanticFavoritesUP = sqlalchemy_to_pydantic(FavoritesModel)
 
 

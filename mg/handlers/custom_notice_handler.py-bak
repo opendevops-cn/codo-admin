@@ -141,10 +141,10 @@ def get_notice_config():
     return all_config_dict
 
 
-custom_notice_urls = [
-    (r'/v1/notifications/custom/', CustomNoticeHandler, {"handle_name": "通知中心-自定义通知"}),
-    (r'/v1/notifications/send_addr/', NoticeAddrHandler, {"handle_name": "通知中心-获取通知信息"}),
-]
+# custom_notice_urls = [
+#     (r'/v1/notifications/custom/', CustomNoticeHandler, {"handle_name": "通知中心-自定义通知"}),
+#     (r'/v1/notifications/send_addr/', NoticeAddrHandler, {"handle_name": "通知中心-获取通知信息"}),
+# ]
 
 if __name__ == "__main__":
     pass

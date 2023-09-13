@@ -13,7 +13,8 @@ from sqlalchemy import or_, func
 from websdk2.cache_context import cache_conn
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.sqlalchemy_pagination import paginate
-from websdk2.model_utils import CommonOptView
+# from websdk2.model_utils import CommonOptView
+from libs.feature_model_utils import CommonOptView
 from models.paas_model import LoginLinkModel
 
 

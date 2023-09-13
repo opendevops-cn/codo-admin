@@ -15,7 +15,7 @@ from websdk2.sqlalchemy_pagination import paginate
 from websdk2.tools import convert
 from websdk2.cache_context import cache_conn
 from models.paas_model import BizModel
-from websdk2.model_utils import CommonOptView
+from libs.feature_model_utils import CommonOptView
 
 ROLE_USER_INFO_STR = "ROLE_USER_INFO_STR"
 opt_obj = CommonOptView(BizModel)

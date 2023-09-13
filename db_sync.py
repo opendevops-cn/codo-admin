@@ -7,7 +7,6 @@ Date    : 2018/12/24
 Desc    : 数据表生成
 """
 
-from models.admin_model import Base as Abase
 # from models.notice_model import Base
 from models.biz_model import Base as Bbase
 from models.paas_model import Base as AppsBase
@@ -29,7 +28,6 @@ engine = create_engine('mysql+pymysql://%s:%s@%s:%s/%s?charset=utf8' % (
 
 def create():
     # Base.metadata.create_all(engine)
-    Abase.metadata.create_all(engine)
     Bbase.metadata.create_all(engine)
     AuBase.metadata.create_all(engine)
     AppsBase.metadata.create_all(engine)
@@ -38,7 +36,6 @@ def create():
 
 def drop():
     # Base.metadata.drop_all(engine)
-    Abase.metadata.drop_all(engine)
     Bbase.metadata.drop_all(engine)
     AppsBase.metadata.drop_all(engine)
 

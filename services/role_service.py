@@ -16,7 +16,7 @@ from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.sqlalchemy_pagination import paginate
 from websdk2.cache_context import cache_conn
 from models.authority import Roles, UserRoles, Users
-from websdk2.model_utils import CommonOptView
+from libs.feature_model_utils import CommonOptView
 
 opt_obj = CommonOptView(Roles)
 ROLE_USER_INFO_STR = "ROLE_USER_INFO_STR"
@@ -74,15 +74,6 @@ def get_users_for_role(**kwargs) -> dict:
                                   Users.nickname, Users.email, Users.source).outerjoin(Users,
                                                                                        Users.id == UserRoles.user_id).filter(
             UserRoles.role_id == role_id, Users.status == '0').order_by(UserRoles.role_id).all()
-        # else:
-        #     dict_list = ['role_name', 'user_role_id', 'role_id', 'user_id', 'username', 'nickname', 'email', 'source']
-        #     count = session.query(Roles).outerjoin(UserRoles, UserRoles.role_id == Roles.role_id).filter(
-        #         Roles.role_name == role_name).count()
-        #     role_info = session.query(Roles.role_name, UserRoles.id, UserRoles.role_id, UserRoles.user_id,
-        #                               Users.username, Users.nickname, Users.email, Users.source).outerjoin(UserRoles,
-        #                                                                                                    UserRoles.role_id == Roles.id).outerjoin(
-        #         Users, Users.id == UserRoles.user_id).filter(
-        #         Roles.role_name == role_name, Users.status == '0').order_by(UserRoles.role_id).all()
 
     queryset = [dict(zip(dict_list, msg)) for msg in role_info]
     return dict(code=0, msg='获取成功', data=queryset, count=count)

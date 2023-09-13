@@ -15,8 +15,8 @@ xsrf_cookies = False
 expire_seconds = 365 * 24 * 60 * 60
 cookie_secret = '61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2X6TP1o/Vo='
 token_secret = "pXFb44gfdh96(3df&%18iodGq4ODQyMzc4"
-max_body_size = 504857600
-max_buffer_size = 504857600
+max_body_size = 3 * 1024 * 1024 * 1024
+max_buffer_size = 3 * 1024 * 1024 * 1024
 etcd_prefix = "/my/gw/"
 
 DEFAULT_DB_DBHOST = os.getenv('DEFAULT_DB_DBHOST', '192.168.0.111')
@@ -42,9 +42,9 @@ DEFAULT_ETCD_HOST_PORT = os.getenv('DEFAULT_ETCD_HOST_PORT', (("10.10.6.154", 23
 DEFAULT_ETCD_PROTOCOL = os.getenv('DEFAULT_ETCD_PROTOCOL', 'http')
 DEFAULT_REDIS_USER = os.getenv('DEFAULT_REDIS_USER', None)
 DEFAULT_ETCD_PASSWORD = os.getenv('DEFAULT_ETCD_PASSWORD', None)
-api_gw = ""  ### 网关
-settings_auth_key = ""  ### 服务之间认证
-notice_conf_map = {}  ### 通知中心使用
+api_gw = ""  # 网关
+settings_auth_key = ""  # 服务之间认证
+notice_conf_map = {}  # 通知中心使用
 oss_data_private = {}  ### 上传私有仓库使用
 ###
 uc_conf = {}  # 从用户中心同步数据

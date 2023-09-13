@@ -5,13 +5,14 @@ author : shenshuo
 date   : 2023年06月05日
 desc   : 平台管理
 """
-import json
-import base64
+# import json
+# import base64
 from sqlalchemy import Column, DateTime
 from datetime import datetime
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy import TypeDecorator
+# from sqlalchemy.orm import relationship, backref
+# from sqlalchemy import TypeDecorator
 from sqlalchemy import Column, String, Integer, JSON, ForeignKey, UniqueConstraint, Text
+from sqlalchemy.dialects.mysql import LONGTEXT, MEDIUMTEXT
 from sqlalchemy.ext.declarative import declarative_base
 from websdk2.utils.cc_crypto import AESCryptoV3
 from models import TimeBaseModel
@@ -86,8 +87,6 @@ class BizModel(TimeBaseModel, Base):
     # def custom_extend_column_dict(self):
     #     return {"tenant": self.set_model.name}
 
-    __mapper_args__ = {"order_by": (sort, biz_en_name)}
-
 
 class LoginLinkModel(TimeBaseModel, Base):
     __tablename__ = 'codo_login_link'
@@ -127,3 +126,27 @@ class StorageMG(TimeBaseModel, Base):
     storage_type = Column('storage_type', String(15), default='OSS')
     file_dir = Column('file_dir', String(80), default='', index=True)
     filename = Column('filename', String(150), default='', index=True)
+
+
+class OperationRecords(TimeBaseModel, Base):
+    __tablename__ = 'codo_opt_records'
+
+    # 操作记录
+    id = Column('id', Integer, primary_key=True, autoincrement=True)
+    user_id = Column('user_id', String(128), index=True)
+    username = Column('username', String(128), index=True)
+    nickname = Column('nickname', String(128), index=True)
+    client_ip = Column('client_ip', String(25))
+    service_name = Column('service_name', String(35))
+    scheme = Column('scheme', String(25))
+    trace_id = Column('trace_id', String(80), index=True)
+    latency = Column('latency', String(128))
+    upstream = Column('upstream', String(255))
+
+    method = Column('method', String(10), index=True)
+    uri = Column('uri', String(255), index=True)
+    rq_headers = Column('rq_headers', MEDIUMTEXT())
+    rq_data = Column('rq_data', LONGTEXT())
+    start_time = Column('start_time', DateTime(), default=datetime.now)
+    response_data = Column('response_data', LONGTEXT())
+    response_status = Column('response_status', String(15))

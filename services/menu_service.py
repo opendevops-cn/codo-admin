@@ -10,7 +10,7 @@ Desc    : 解释个锤子
 from sqlalchemy import or_, func
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.sqlalchemy_pagination import paginate
-from websdk2.model_utils import CommonOptView, queryset_to_list
+from libs.feature_model_utils import CommonOptView, queryset_to_list
 from models.authority import Menus, RoleMenus
 
 opt_obj = CommonOptView(Menus)

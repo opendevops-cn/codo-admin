@@ -13,7 +13,7 @@ import datetime
 import redis
 from shortuuid import uuid
 from websdk2.db_context import DBContext
-from models.admin_model import OperationRecord
+from models.paas_model import OperationRecords
 from concurrent.futures import ThreadPoolExecutor
 from websdk2.consts import const
 from websdk2.web_logs import ins_log
@@ -45,9 +45,9 @@ class RedisSubscriber:
 
         log_data = list(fields.values())[0]
         log_data_dict = json.loads(log_data)
-
         response_data = log_data_dict.pop('response')
         request_data = log_data_dict.pop('request')
+
         user_info = dict()
         if "user_info" in log_data_dict: user_info = log_data_dict.pop('user_info')
         ###
@@ -58,24 +58,26 @@ class RedisSubscriber:
         log_data_dict['scheme'] = request_data.get('scheme')
         log_data_dict['uri'] = request_data.get('uri')[0:255]
         log_data_dict['method'] = request_data.get('method')
+        log_data_dict['rq_headers'] = str(request_data.get('headers'))
+        # log_data_dict['rq_query'] = request_data.get('method')
 
         request_data_data = request_data.get('data')
         try:
             if request_data_data:
                 request_data_data = json.loads(request_data_data)
                 if "password" in request_data_data: request_data_data['password'] = "*********************"
-                request_data_data = json.dumps(request_data_data)[0:60000]
+                request_data_data = json.dumps(request_data_data)
         except:
             pass
 
-        log_data_dict['data'] = request_data_data
+        log_data_dict['rq_data'] = request_data_data
         try:
             log_data_dict['trace_id'] = request_data.get('headers').get('x-trace-id')[0:80]
         except:
             pass
 
         log_data_dict['response_status'] = response_data.get('status')
-
+        log_data_dict['response_data'] = str(response_data)
         start_time = log_data_dict.get('start_time')
         start_time = int(start_time) / 1000
         times = datetime.datetime.fromtimestamp(start_time)
@@ -127,7 +129,7 @@ class RedisSubscriber:
                     log_data = self.process_message(id, fields)
                     if log_data:
                         with DBContext('w', None, True, **self.__settings) as session:
-                            session.add(OperationRecord(**log_data))
+                            session.add(OperationRecords(**log_data))
                     # 0 / 0  # 这个模拟处理崩溃
                     # 这里是你要做的事情，封一个函数这里调用即可
                     # pass

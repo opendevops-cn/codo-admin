@@ -11,8 +11,10 @@ Desc    : 解释一下吧
 from sqlalchemy import or_
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.sqlalchemy_pagination import paginate
+from models.authority import RoleApps
 from models.paas_model import AppsModel
-from websdk2.model_utils import CommonOptView
+# from websdk2.model_utils import CommonOptView, queryset_to_list
+from libs.feature_model_utils import CommonOptView,queryset_to_list
 
 opt_obj = CommonOptView(AppsModel)
 
@@ -30,8 +32,8 @@ def _get_value(value: str = None):
         return True
     return or_(
         AppsModel.name.like(f'%{value}%'),
-        AppsModel.code.like(f'%{value}%'),
-        AppsModel.path.like(f'%{value}%'),
+        AppsModel.app_code.like(f'%{value}%'),
+        AppsModel.href.like(f'%{value}%'),
     )
 
 
@@ -45,3 +47,11 @@ def get_apps_list_for_api(**params) -> dict:
     with DBContext('r') as session:
         page = paginate(session.query(AppsModel).filter(_get_value(value)).filter_by(**filter_map), **params)
     return dict(msg='获取成功', code=0, count=page.total, data=page.items)
+
+
+def get_apps_list_for_role(role_id: int) -> list:
+    with DBContext('r') as session:
+        app_info = session.query(AppsModel).outerjoin(RoleApps, AppsModel.id == RoleApps.app_id).filter(
+            RoleApps.role_id == role_id, RoleApps.status == '0', AppsModel.status == '0').all()
+
+    return queryset_to_list(app_info)

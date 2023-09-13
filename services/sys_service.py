@@ -17,7 +17,7 @@ from websdk2.tools import convert
 from websdk2.db_context import DBContextV2 as DBContext
 from models.paas_model import SystemSettings
 from websdk2.utils.cc_crypto import AESCryptoV3
-from websdk2.model_utils import CommonOptView
+from libs.feature_model_utils import CommonOptView
 
 mc = AESCryptoV3()
 opt_obj = CommonOptView(SystemSettings)
@@ -64,6 +64,7 @@ def get_sys_conf_dict(**params) -> dict:
 
 
 def get_sys_conf_dict_for_me(**params) -> dict:
+    # TODO 缓存数据不存在应该再从数据库查询一次
     category = params.get('category', 'all')
     conf_dict = dict()
     redis_conn = cache_conn()

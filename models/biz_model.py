@@ -8,7 +8,7 @@ Date    : 2021/11/10 14:33
 Desc    : 解释一下吧
 """
 
-from sqlalchemy import Column, String, Integer, DateTime, JSON, Boolean
+from sqlalchemy import Column, String, Integer, DateTime, JSON, Boolean, asc, desc
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
@@ -41,4 +41,4 @@ class BusinessModel(TimeBaseModel, Base):
     # business_group = Column('business_group', String(50), default='')  ### 业务集 CMS/OPS
     # client_group_id = Column('client_group_id', String(11), nullable=True)  ### 租户组id
     # map_client_id = Column('map_client_id', Integer, index=True, nullable=True)
-    __mapper_args__ = {"order_by": (sort, business_en)}
+    # __mapper_args__ = {"order_by": (sort, business_en)}
