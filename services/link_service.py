@@ -39,6 +39,10 @@ def _get_value(value: str = None):
     )
 
 
+def create_url(host, code):
+    return f"https://applink.feishu.cn/client/web_url/open?url={host}/api/acc/m/{code}"
+
+
 def get_link_list_for_api(**params) -> dict:
     value = params.get('searchValue') if "searchValue" in params else params.get('searchVal')
     filter_map = params.pop('filter_map') if "filter_map" in params else {}
@@ -47,6 +51,7 @@ def get_link_list_for_api(**params) -> dict:
     with DBContext('r') as session:
         page = paginate(session.query(LoginLinkModel).filter(_get_value(value)).filter_by(**filter_map), **params)
 
+    page.items = [{**i, "show_url": create_url(params['rq_host'], i.get('code'))} for i in page.items]
     return dict(code=0, msg="获取成功", count=page.total, data=page.items)
 
 

@@ -8,6 +8,7 @@ Desc    : 解释个锤子
 """
 
 import json
+import logging
 from abc import ABC
 from shortuuid import uuid
 from libs.base_handler import BaseHandler
@@ -16,6 +17,7 @@ from services.link_service import opt_obj, get_link_list_for_api
 
 class LinkHandler(BaseHandler, ABC):
     def get(self, *args, **kwargs):
+        self.params['rq_host'] = f"{self.request.protocol}://{self.request.host}"
         res = get_link_list_for_api(**self.params)
 
         return self.write(res)
