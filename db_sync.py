@@ -17,14 +17,15 @@ from settings import settings as app_settings
 from sqlalchemy import create_engine
 
 default_configs = app_settings[const.DB_CONFIG_ITEM][const.DEFAULT_DB_KEY]
-engine = create_engine('mysql+pymysql://%s:%s@%s:%s/%s?charset=utf8mb4' % (
-    default_configs.get(const.DBUSER_KEY),
-    default_configs.get(const.DBPWD_KEY),
-    default_configs.get(const.DBHOST_KEY),
-    default_configs.get(const.DBPORT_KEY),
-    default_configs.get(const.DBNAME_KEY),
-), echo=True)
+# engine = create_engine('mysql+pymysql://%s:%s@%s:%s/%s?charset=utf8mb4' % (
+#     default_configs.get(const.DBUSER_KEY),
+#     default_configs.get(const.DBPWD_KEY),
+#     default_configs.get(const.DBHOST_KEY),
+#     default_configs.get(const.DBPORT_KEY),
+#     default_configs.get(const.DBNAME_KEY),
+# ), echo=True)
 
+engine = create_engine(f'mysql+pymysql://{default_configs.get(const.DBUSER_KEY)}:{default_configs.get(const.DBPWD_KEY)}@{default_configs.get(const.DBHOST_KEY)}:{default_configs.get(const.DBPORT_KEY)}/{default_configs.get(const.DBNAME_KEY)}', echo=True)
 
 def create():
     # Base.metadata.create_all(engine)
