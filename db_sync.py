@@ -25,7 +25,10 @@ default_configs = app_settings[const.DB_CONFIG_ITEM][const.DEFAULT_DB_KEY]
 #     default_configs.get(const.DBNAME_KEY),
 # ), echo=True)
 
-engine = create_engine(f'mysql+pymysql://{default_configs.get(const.DBUSER_KEY)}:{default_configs.get(const.DBPWD_KEY)}@{default_configs.get(const.DBHOST_KEY)}:{default_configs.get(const.DBPORT_KEY)}/{default_configs.get(const.DBNAME_KEY)}', echo=True)
+engine = create_engine(
+    f'mysql+pymysql://{default_configs.get(const.DBUSER_KEY)}:{default_configs.get(const.DBPWD_KEY)}@{default_configs.get(const.DBHOST_KEY)}:{default_configs.get(const.DBPORT_KEY)}/{default_configs.get(const.DBNAME_KEY)}',
+    echo=True)
+
 
 def create():
     # Base.metadata.create_all(engine)
