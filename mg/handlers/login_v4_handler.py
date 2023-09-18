@@ -177,7 +177,6 @@ class LoginHandler(RequestHandler, ABC):
         self.set_secure_cookie("nickname", user_info.nickname)
         self.set_secure_cookie("username", user_info.username)
         self.set_secure_cookie("user_id", user_id)
-        # self.set_cookie('auth_key', auth_key, expires_days=1)
 
         # 更新登录IP 和登录时间
         self.update_login_ip(user_id, self.request.headers.get("X-Forwarded-For"))
@@ -186,8 +185,9 @@ class LoginHandler(RequestHandler, ABC):
 
         # self.set_cookie("auth_key", auth_key, expires_days=7, httponly=True)
         self.set_cookie("auth_key", auth_key, expires_days=1)
+        self.set_cookie("is_login", 'yes', expires_days=1)
 
-        return self.write(real_login_dict)
+        self.finish(real_login_dict)
 
 
 class LogoutHandler(RequestHandler, ABC):
