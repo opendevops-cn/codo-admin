@@ -35,11 +35,12 @@ class MyProgram(MainProgram):
 if __name__ == '__main__':
     fire.Fire(MyProgram)
 
-### python3 startup.py --service=admin-mg-api --port=8010
-### python3 startup.py --service=sub_log
-### python3 startup.py --service=gw_log
-### python3 startup.py --service=init
+"""
+python3 startup.py --service=api--port=8010
+python3 startup.py --service=sub_log
+python3 startup.py --service=gw_log
+python3 startup.py --service=init
 
-### docker build  --no-cache --build-arg SERVICE_NAME=admin-mg-api  . -t ops_mg_image
-### docker build --build-arg SERVICE_NAME=gw_log  . -t ops_mg_log_image
-###
+docker build  --no-cache --build-arg SERVICE_NAME=admin-mg-api  . -t ops_mg_image
+docker build --build-arg SERVICE_NAME=gw_log  . -t ops_mg_log_image
+"""
