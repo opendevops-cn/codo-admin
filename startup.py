@@ -22,7 +22,7 @@ class MyProgram(MainProgram):
     def __init__(self, service='api', progressid=''):
         self.__app = None
         settings = app_settings
-        if service in ['admin-mg-api', 'mg-api', 'mg', 'api'] or not service:
+        if service in ['admin-mg-api', 'mg-api', 'mg', 'api', 'adminv4'] or not service:
             self.__app = MgApp(**settings)
         elif service in ['sub_log', 'gw_log', 'gw-log', 'admin-gw-log']:
             self.__app = SubApp(service=service, **settings)
