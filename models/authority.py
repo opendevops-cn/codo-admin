@@ -49,10 +49,10 @@ class Roles(TimeBaseModel, Base):
     __tablename__ = 'codo_a_roles'
     # 角色表
     id = Column('id', Integer, primary_key=True, autoincrement=True)
-    role_name = Column('role_name', String(35), unique=True, index=True)
+    role_name = Column('role_name', String(35), unique=True)
     details = Column('details', String(250), default='')  # 描述、备注
     status = Column('status', String(5), default='0', index=True)
-    role_type = Column('role_type', String(10), default='normal')  # 角色类型， normal, base, default
+    role_type = Column('role_type', String(10), default='normal', index=True)  # 角色类型， normal, base, default
     role_subs = Column('role_subs', JSON(), default=[])
     is_conf = Column('is_conf', String(5), default='no')  # 是否配置权限  yes no
 

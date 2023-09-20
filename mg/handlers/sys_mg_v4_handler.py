@@ -26,7 +26,7 @@ from websdk2.model_utils import insert_or_update
 from websdk2.consts import const
 from models.authority import Users, Menus, Functions, Components, Roles
 from services.audit_service import get_opt_log_list_v4
-from services.sys_service import settings_add, get_sys_conf_dict, init_email
+from services.sys_service import settings_add, get_sys_conf_dict, get_sys_open_conf_dict, init_email
 
 
 class LogV4Handler(BaseHandler, ABC):
@@ -208,6 +208,14 @@ class AppSettingsHandler(BaseHandler, ABC):
         return self.write(res)
 
 
+class OpenConfHandler(BaseHandler, ABC):
+
+    def get(self):
+        # 通用数据
+        res = get_sys_open_conf_dict(**self.params)
+        return self.write(res)
+
+
 class CheckSettingsHandler(BaseHandler, ABC):
     _thread_pool = ThreadPoolExecutor(5)
 
@@ -247,6 +255,7 @@ class CheckSettingsHandler(BaseHandler, ABC):
 
 sys_mg_v4_urls = [
     (r"/v4/app/opt_log/", LogV4Handler, {"handle_name": "PAAS管理-操作日志V4"}),
+    (r"/v4/na/conf/", OpenConfHandler, {"handle_name": "PAAS管理-开放配置"}),
     (r'/v4/sysconfig/settings/', AppSettingsHandler, {"handle_name": "PAAS管理-系统设置", "method": ["ALL"]}),
     (r'/v4/sysconfig/check/', CheckSettingsHandler, {"handle_name": "PAAS管理-系统设置检查", "method": ["ALL"]}),
     (r'/v4/authority/register/', AuthorityRegister, {"handle_name": "PAAS管理-权限注册", "method": ["ALL"]}),

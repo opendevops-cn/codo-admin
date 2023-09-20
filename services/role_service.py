@@ -27,7 +27,8 @@ def _get_value(value: str = None):
         return True
     return or_(
         Roles.id == value,
-        Roles.role_name.like(f'%{value}%')
+        Roles.role_name.like(f'%{value}%'),
+        Roles.role_type == value
     )
 
 

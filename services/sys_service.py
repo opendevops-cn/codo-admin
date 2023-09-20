@@ -63,6 +63,17 @@ def get_sys_conf_dict(**params) -> dict:
     return dict(msg='获取成功', code=0, data=conf_dict)
 
 
+def get_sys_open_conf_dict(**params) -> dict:
+    show_conf = ["feishu_client_id"]
+    with DBContext('r') as session:
+        __info = session.query(SystemSettings).all()
+    conf_dict = dict()
+    for i in __info:
+        if i.name in show_conf:
+            conf_dict[i.name] = i.value
+    return dict(msg='获取成功', code=0, data=conf_dict)
+
+
 def get_sys_conf_dict_for_me(**params) -> dict:
     # TODO 缓存数据不存在应该再从数据库查询一次
     category = params.get('category', 'all')

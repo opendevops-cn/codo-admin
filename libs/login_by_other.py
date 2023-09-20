@@ -13,6 +13,9 @@ import requests
 import hashlib
 from websdk2.db_context import DBContextV2 as DBContext
 from models.authority import Users
+import base64
+import json
+from cryptography.fernet import Fernet
 
 
 class OtherAuthV2:
@@ -86,3 +89,64 @@ class OtherAuthV3:
 
     def __call__(self, *args, **kwargs):
         return self.call()
+
+
+class OtherAuthV4:
+    """对接安全中心认证"""
+
+    def __init__(self, **kwargs):
+        self.__uc_conf = kwargs.get('uc_conf')
+        self.app_id_v2 = self.__uc_conf['app_id_v2']
+        self.__username = kwargs.get('username')
+        self.__password = kwargs.get('password')
+        self.__auth_obj = HLAuthSDK(self.__uc_conf['auth_api_v2'], self.__uc_conf['app_secret_v2'])
+
+    def call(self):
+        try:
+            res_code = self.__auth_obj.authenticate(self.app_id_v2, self.__username, self.__password)
+        except Exception as err:
+            print(err)
+            res_code = False
+        return res_code
+
+    def __call__(self, *args, **kwargs):
+        return self.call()
+
+
+class HLAuthSDK:
+    def __init__(self, server_url, encryption_key):
+        self.server_url = server_url
+        self.encryption_key = encryption_key
+        self.cipher_suite = Fernet(encryption_key)
+
+    def authenticate(self, app_id, username, password):
+        timestamp = int(time.time()) * 256
+
+        # 要发送的数据
+        data = {
+            'username': username,
+            'password': password
+        }
+
+        # 将数据转换为 JSON 格式
+        json_data = json.dumps(data)
+
+        # 加密数据
+        encrypted_data = self.cipher_suite.encrypt(json_data.encode())
+
+        data_string = f'key={timestamp}&app_id={app_id}&data={encrypted_data}'
+        encoded_data_string = base64.b64encode(data_string.encode()).decode()
+
+        try:
+            # 发送加密后的数据和请求头到服务器
+            response = requests.post(self.server_url, data=encoded_data_string)
+
+            # 检查服务器响应
+            if response.status_code == 200:
+                return True
+            else:
+                return False
+
+        except Exception as e:
+            print('An error occurred:', str(e))
+            return False

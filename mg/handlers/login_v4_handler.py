@@ -322,8 +322,8 @@ class LoginFSHandler(RequestHandler, ABC):
         # real_login_dict = dict(code=0, username=user_info.username, nickname=user_info.nickname, auth_key=auth_key,
         #                        avatar=user_info.avatar, c_url=c_url, msg='登录成功')
 
-        self.set_secure_cookie('auth_key_login', 'is_login', expires_days=1, httponly=False)
-        self.set_cookie("auth_key", auth_key, expires_days=1, httponly=True)
+        self.set_secure_cookie('is_login', 'yes', expires_days=1, httponly=False)
+        self.set_cookie("auth_key", auth_key, expires_days=1, httponly=False)
 
         self.redirect(c_url)
 
