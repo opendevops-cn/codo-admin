@@ -32,13 +32,23 @@ def _get_value(value: str = None):
     )
 
 
+def _get_role_type(value: str = None):
+    if not value:
+        return True
+    return or_(
+        Roles.role_type == value
+    )
+
+
 def get_role_list_for_api(**params) -> dict:
     value = params.get('searchValue') if "searchValue" in params else params.get('searchVal')
     filter_map = params.pop('filter_map') if "filter_map" in params else {}
     if 'biz_id' in filter_map: filter_map.pop('biz_id')  # 暂时不隔离
     if 'page_size' not in params: params['page_size'] = 300  # 默认获取到全部数据
+    role_type = params.get('role_type')
     with DBContext('r') as session:
-        page = paginate(session.query(Roles).filter(_get_value(value)).filter_by(**filter_map), **params)
+        page = paginate(
+            session.query(Roles).filter(_get_role_type(role_type), _get_value(value)).filter_by(**filter_map), **params)
 
     return dict(code=0, msg='获取成功', data=page.items, count=page.total)
 
