@@ -96,7 +96,8 @@ def get_all_user_list_for_role(**kwargs):
     with DBContext('r') as session:
         role_info = session.query(Roles.id, Roles.role_name, Users.username, Users.nickname, Users.id).outerjoin(
             UserRoles, UserRoles.role_id == Roles.id).outerjoin(
-            Users, Users.id == UserRoles.user_id).filter(Roles.status == '0', Users.status == '0').all()
+            Users, Users.id == UserRoles.user_id).filter(Roles.role_type == 'normal', Roles.status == '0',
+                                                         Users.status == '0').all()
 
     for msg_tuple in role_info:
         role_id = msg_tuple[0]
