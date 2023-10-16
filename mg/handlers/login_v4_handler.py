@@ -107,7 +107,7 @@ class LoginHandler(RequestHandler, ABC):
     @gen.coroutine
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        print(data)
+        # print(data)
         username = data.get('username')
         password = data.get('password')
         dynamic = data.get('dynamic')
