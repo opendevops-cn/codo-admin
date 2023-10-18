@@ -11,7 +11,6 @@ from tornado.options import define
 from websdk2.program import MainProgram
 from settings import settings as app_settings
 from mg.applications import Application as MgApp
-# from authority.applications import Application as AuthApp
 from mg.subscribe import RedisSubscriber as SubApp
 from libs.registration import Registration
 

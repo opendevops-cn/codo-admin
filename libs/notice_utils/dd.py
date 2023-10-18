@@ -10,13 +10,13 @@ Desc    : 发送钉钉消息
 
 import json
 import requests
+import logging
 import time
 import hmac
 import hashlib
 import base64
 from urllib import parse
 from string import Template
-from websdk2.web_logs import ins_log
 
 
 class DingTalk:
@@ -73,7 +73,7 @@ class DingTalk:
             ret = json.loads(res.content)
             if ret['errcode'] == 0: return {"Message": "OK", "Code": 0}
         except Exception as err:
-            ins_log.read_log('error', f'send ding talk error: {err}')
+            logging.error(f'send ding talk error: {err}')
 
             return {"Message": str(err), "Code": -1}
 

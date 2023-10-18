@@ -11,7 +11,7 @@ Desc    : 解释一下吧
 import requests
 import json
 from string import Template
-from websdk2.web_logs import ins_log
+import logging
 
 
 class WorkWeiXin:
@@ -46,7 +46,7 @@ class WorkWeiXin:
             ret = json.loads(res.content)
             if ret['errcode'] == 0: return {"Message": "OK", "Code": 0}
         except Exception as err:
-            ins_log.read_log('error', f'send work wei xin error: {err}')
+            logging.error(f'send work wei xin error: {err}')
             return {"Message": str(err), "Code": -1}
 
         return {"Message": "error", "Code": -2}

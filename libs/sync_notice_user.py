@@ -15,7 +15,6 @@ from models.admin_model import Users
 from models.notice_model import NoticeTemplate, NoticeGroup
 from websdk2.jwt_token import gen_md5
 from websdk2.consts import const
-from websdk2.web_logs import ins_log
 from websdk2.tools import RedisLock
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.model_utils import model_to_dict

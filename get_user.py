@@ -8,12 +8,10 @@ role   : 权限同步和鉴定
 import time
 import hashlib
 import datetime
-
+import logging
 from models.admin_model import Users
 from models.authority import Users
 from settings import settings
-
-from websdk2.web_logs import ins_log
 from websdk2.db_context import DBContextV2 as DBContext
 
 import requests
@@ -50,7 +48,7 @@ def get_all_user():
 
 def sync_user_from_ucenter():
     def index():
-        ins_log.read_log('info', f'async_all_user_redis_lock_key {datetime.datetime.now()}')
+        logging.info(f'async_all_user_redis_lock_key {datetime.datetime.now()}')
         with DBContext('w', None, True, **settings) as session:
             for user in get_all_user():
                 user_id = str(user.get('uid'))
@@ -66,16 +64,16 @@ def sync_user_from_ucenter():
 
                 try:
                     session.add(insert_or_update(Users,
-                                                     # f"username='{user_name}' and source_account_id='{user_id}' and nickname='{user.get('name')}'",
-                                                     f"source_account_id='{user_id}'",
-                                                     source_account_id=user_id, fs_id=user.get('feishu_userid'),
-                                                     nickname=user.get('name'), manager=user.get('manager', ''),
-                                                     department=user.get('position'), email=user.get('email'),
-                                                     source="ucenter", tel=user.get('mobile'), status='0',
-                                                     avatar=user.get('avatar'), username=user.get('english_name')))
+                                                 # f"username='{user_name}' and source_account_id='{user_id}' and nickname='{user.get('name')}'",
+                                                 f"source_account_id='{user_id}'",
+                                                 source_account_id=user_id, fs_id=user.get('feishu_userid'),
+                                                 nickname=user.get('name'), manager=user.get('manager', ''),
+                                                 department=user.get('position'), email=user.get('email'),
+                                                 source="ucenter", tel=user.get('mobile'), status='0',
+                                                 avatar=user.get('avatar'), username=user.get('english_name')))
                 except Exception as err:
-                    ins_log.read_log('info', f'\n async_all_user_redis_lock_key Exception {err}')
-        ins_log.read_log('info', f'async_all_user_redis_lock_key end ')
+                    logging.info(f'\n async_all_user_redis_lock_key Exception {err}')
+        logging.info(f'async_all_user_redis_lock_key end ')
 
     index()
 

@@ -9,12 +9,12 @@ import time
 import hashlib
 import json
 import datetime
+import logging
 from loguru import logger
 from concurrent.futures import ThreadPoolExecutor
 from websdk2.cache_context import cache_conn
 from models.authority import Users, Roles, UserRoles, RoleFunctions, Functions, UserToken
 from settings import settings
-from websdk2.web_logs import ins_log
 from websdk2.tools import RedisLock
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.tools import now_timestamp, convert
@@ -196,7 +196,7 @@ class MyVerify:
     @deco(RedisLock("async_token_block_list_redis_lock_key"))
     def token_block_list(self):
         ttl_id = now_timestamp()
-        ins_log.read_log('info', f'async_token_block_list {ttl_id}, {datetime.datetime.now()}')
+        logger.info(f'async_token_block_list {ttl_id}, {datetime.datetime.now()}')
         with DBContext('r') as session:
             token_info = session.query(UserToken.token_md5).filter(UserToken.status != '0').all()
 
@@ -238,7 +238,7 @@ def sync_user_from_uc():
 
     @deco1(RedisLock("async_all_user_redis_lock_key"))
     def index():
-        ins_log.read_log('info', f'async_all_user_redis_lock_key {datetime.datetime.now()}')
+        logger.info(f'async_all_user_redis_lock_key {datetime.datetime.now()}')
         with DBContext('w', None, True, **settings) as session:
             for user in get_all_user():
                 user_id = str(user.get('uid'))
@@ -262,8 +262,8 @@ def sync_user_from_uc():
                                                  source="ucenter", tel=user.get('mobile'), status='0',
                                                  avatar=user.get('avatar'), username=user.get('english_name')))
                 except Exception as err:
-                    ins_log.read_log('info', f'\n async_all_user_redis_lock_key Exception {err}')
-        ins_log.read_log('info', f'async_all_user_redis_lock_key end ')
+                    logger.error(f'\n async_all_user_redis_lock_key Exception {err}')
+        logger.info(f'async_all_user_redis_lock_key end ')
 
     index()
 

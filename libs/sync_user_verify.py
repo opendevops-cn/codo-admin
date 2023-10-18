@@ -9,10 +9,10 @@ import time
 import hashlib
 import json
 import datetime
+import logging
 from websdk2.cache_context import cache_conn
 from models.admin_model import Users, UserRoles, RoleFunctions, Functions, UserToken
 from settings import settings
-from websdk2.web_logs import ins_log
 from websdk2.tools import RedisLock
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.tools import now_timestamp, convert
@@ -95,7 +95,7 @@ class MyVerify:
     @deco1(RedisLock("async_all_api_permission_redis_lock_key"))
     def sync_all_api_permission(self):
         ttl_id = now_timestamp()
-        ins_log.read_log('info', f'sync_all_api_permission {ttl_id}, {datetime.datetime.now()}')
+        logging.info(f'sync_all_api_permission {ttl_id}, {datetime.datetime.now()}')
         client = Etcd3Client(hosts=self.etcd_dict.get('DEFAULT_ETCD_HOST_PORT'))
 
         api_data = self.api_permissions()
@@ -122,7 +122,7 @@ class MyVerify:
     @deco(RedisLock("async_diff_api_permission_redis_lock_key"))
     def sync_diff_api_permission(self):
         ttl_id = now_timestamp()
-        ins_log.read_log('info', f'sync_diff_api_permission {ttl_id}, {datetime.datetime.now()}')
+        logging.info(f'sync_diff_api_permission {ttl_id}, {datetime.datetime.now()}')
         client = Etcd3Client(hosts=self.etcd_dict.get('DEFAULT_ETCD_HOST_PORT'))
 
         api_data = self.api_permissions()
@@ -173,7 +173,7 @@ class MyVerify:
     @deco(RedisLock("async_token_block_list_redis_lock_key"))
     def token_block_list(self):
         ttl_id = now_timestamp()
-        ins_log.read_log('info', f'async_token_block_list {ttl_id}, {datetime.datetime.now()}')
+        logging.info(f'async_token_block_list {ttl_id}, {datetime.datetime.now()}')
         with DBContext('r') as session:
             token_info = session.query(UserToken.token_md5).filter(UserToken.status != '0').all()
 
@@ -185,61 +185,3 @@ class MyVerify:
             block_dict[token_md5] = 'y'
 
         client.put(f'{self.token_block_prefix}block', json.dumps(block_dict), lease=ttl_id)
-
-
-# def get_all_user():
-#     def md5hex(sign):
-#         md5 = hashlib.md5()  # 创建md5加密对象
-#         md5.update(sign.encode('utf-8'))  # 指定需要加密的字符串
-#         str_md5 = md5.hexdigest()  # 加密后的字符串
-#         return str_md5
-#
-#     uc_conf = settings.get('uc_conf')
-#
-#     now = int(time.time())
-#     params = {
-#         "app_id": "devops",
-#         "sign": md5hex(uc_conf['app_id'] + str(now) + uc_conf['app_secret']),
-#         "token": uc_conf['token'],
-#         "timestamp": now
-#     }
-#     url = uc_conf['endpoint'] + "/api/all-users"
-#     response = requests.get(url=url, params=params)
-#     res = response.json()
-#     print(res.get('message'))
-#     return res.get('data')
-
-
-# def sync_user_from_uc():
-#     from models.authority import Users
-#
-#     @deco1(RedisLock("async_all_user_redis_lock_key"))
-#     def index():
-#         ins_log.read_log('info', f'async_all_user_redis_lock_key {datetime.datetime.now()}')
-#         with DBContext('w', None, True, **settings) as session:
-#             for user in get_all_user():
-#                 user_id = str(user.get('uid'))
-#                 username = user.get('english_name')
-#                 if not user.get('position'):
-#                     try:
-#                         session.query(Users).filter(Users.id == user_id).delete(synchronize_session=False)
-#                         session.commit()
-#                     except Exception as err:
-#                         print('del', err)
-#                     continue
-#                 if username.startswith('wb-'): continue
-#
-#                 try:
-#                     session.add(insert_or_update(Users,
-#                                                  # f"username='{user_name}' and source_account_id='{user_id}' and nickname='{user.get('name')}'",
-#                                                  f"source_account_id='{user_id}'",
-#                                                  source_account_id=user_id, fs_id=user.get('feishu_userid'),
-#                                                  nickname=user.get('name'), manager=user.get('manager', ''),
-#                                                  department=user.get('position'), email=user.get('email'),
-#                                                  source="ucenter", tel=user.get('mobile'), status='0',
-#                                                  avatar=user.get('avatar'), username=user.get('english_name')))
-#                 except Exception as err:
-#                     ins_log.read_log('info', f'\n async_all_user_redis_lock_key Exception {err}')
-#         ins_log.read_log('info', f'async_all_user_redis_lock_key end ')
-#
-#     index()

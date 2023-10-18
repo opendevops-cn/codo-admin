@@ -9,6 +9,7 @@ Desc    : 发送通知 API
 
 import json
 import base64
+import logging
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
 from libs.base_handler import BaseHandler
@@ -21,7 +22,6 @@ from websdk2.consts import const
 from websdk2.tools import convert
 from websdk2.utils import TokenBucket
 from websdk2.cache_context import cache_conn
-from websdk2.web_logs import ins_log
 ###
 from websdk2.db_context import DBContextV2 as DBContext
 from models.admin_model import Users
@@ -160,7 +160,7 @@ class NoticeHandler(BaseHandler):
             return dict(code=-5, msg=f'{way}发送失败! {str(e)}')
 
     def send_default(self, **kwargs):
-        ins_log.read_log('info', '启用失败策略，发送默认错误通知')
+        logging.info('启用失败策略，发送默认错误通知')
         err_msg = kwargs.get('msg', None)
         err_template = kwargs.get('name', None)
 

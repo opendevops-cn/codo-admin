@@ -11,12 +11,12 @@ import json
 import time
 import datetime
 import redis
+import logging
 from shortuuid import uuid
 from websdk2.db_context import DBContext
 from models.paas_model import OperationRecords
 from concurrent.futures import ThreadPoolExecutor
 from websdk2.consts import const
-from websdk2.web_logs import ins_log
 
 
 class RedisSubscriber:
@@ -41,7 +41,7 @@ class RedisSubscriber:
     @staticmethod
     def process_message(msg_id, fields):
         if 'test' in fields: return {}
-        ins_log.read_log('info', msg_id)
+        logging.info(msg_id)
 
         log_data = list(fields.values())[0]
         log_data_dict = json.loads(log_data)
@@ -82,7 +82,7 @@ class RedisSubscriber:
         start_time = int(start_time) / 1000
         times = datetime.datetime.fromtimestamp(start_time)
         log_data_dict['start_time'] = times
-        ins_log.read_log('info', log_data_dict)
+        logging.info(log_data_dict)
         return log_data_dict
 
     def create_consumer_group(self, stream_name, group_name):
@@ -96,11 +96,11 @@ class RedisSubscriber:
 
     def stream_message(self, stream_name):
         """stream and groups info"""
-        ins_log.read_log('info', f'stream info: {self.redis_conn.xinfo_stream(stream_name)}')
-        ins_log.read_log('info', f'groups info: {self.redis_conn.xinfo_groups(stream_name)}')
+        logging.info(f'stream info: {self.redis_conn.xinfo_stream(stream_name)}')
+        logging.info(f'groups info: {self.redis_conn.xinfo_groups(stream_name)}')
 
     def subscribe_msgs(self, consumer_name):
-        ins_log.read_log('info', f"Consumer {consumer_name} starting...")
+        logging.info(f"Consumer {consumer_name} starting...")
         lastid = '0-0'
         check_backlog = True
         while True:

@@ -6,6 +6,7 @@ date   : 2017-10-11
 role   : 管理端 Application
 """
 
+from abc import ABC
 from tornado.ioloop import PeriodicCallback
 from websdk2.application import Application as myApplication
 # from libs.feature_application import Application as myApplication
@@ -13,7 +14,7 @@ from libs.sync_user_verift_v4 import async_api_permission_v4, async_user_center
 from mg.handlers import urls
 
 
-class Application(myApplication):
+class Application(myApplication, ABC):
     def __init__(self, **settings):
         # 同步用户
         check_callback_user = PeriodicCallback(async_user_center, 3600000)  # 3600000  一个小时

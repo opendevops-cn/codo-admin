@@ -10,8 +10,8 @@ Desc    : 发送钉钉工作通知
 
 import json
 import requests
+import logging
 from string import Template
-from websdk2.web_logs import ins_log
 
 
 class DingTalkWork:
@@ -56,7 +56,7 @@ class DingTalkWork:
             else:
                 return {"Message": res.json()['errmsg'], "Code": -25}
         except Exception as err:
-            ins_log.read_log('error', f'send ding work talk error: {err}')
+            logging.error( f'send ding work talk error: {err}')
             return {"Message": str(err), "Code": -26}
 
     def send_custom(self, **kwargs):
@@ -77,7 +77,7 @@ class DingTalkWork:
             else:
                 return {"Message": res.json()['errmsg'], "Code": -25}
         except Exception as err:
-            ins_log.read_log('error', f'send ding work talk error: {err}')
+            logging.error( f'send ding work talk error: {err}')
             return {"Message": str(err), "Code": -26}
 
     def send_update(self, **kwargs):
@@ -91,7 +91,7 @@ class DingTalkWork:
             else:
                 return {"Message": res.json()['errmsg'], "Code": -27}
         except Exception as err:
-            ins_log.read_log('error', f'send_update ding work talk error: {err}')
+            logging.error( f'send_update ding work talk error: {err}')
             return {"Message": str(err), "Code": -28}
 
     def get_access_token(self):
