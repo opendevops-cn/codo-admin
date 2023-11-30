@@ -9,7 +9,6 @@ import time
 import hashlib
 import datetime
 import logging
-from models.admin_model import Users
 from models.authority import Users
 from settings import settings
 from websdk2.db_context import DBContextV2 as DBContext

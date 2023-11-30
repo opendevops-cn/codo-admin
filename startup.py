@@ -25,7 +25,7 @@ class MyProgram(MainProgram):
             self.__app = MgApp(**settings)
         elif service in ['sub_log', 'gw_log', 'gw-log', 'admin-gw-log']:
             self.__app = SubApp(service=service, **settings)
-        elif service in ['init']:
+        elif service == 'init':
             self.__app = Registration(**settings)
         super(MyProgram, self).__init__(progressid)
         self.__app.start_server()
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     fire.Fire(MyProgram)
 
 """
-python3 startup.py --service=api--port=8010
+python3 startup.py --service=api --port=8010
 python3 startup.py --service=sub_log
 python3 startup.py --service=gw_log
 python3 startup.py --service=init

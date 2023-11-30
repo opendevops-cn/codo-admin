@@ -1,0 +1,110 @@
+version: "3"
+services:
+
+    mysql:
+        image: mysql:8.0
+        restart: always
+        user: root
+        privileged: true
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - ./mysql/data:/var/lib/mysql
+            - ./mysql/init:/docker-entrypoint-initdb.d
+        environment:
+            - TZ=Asia/Shanghai
+            - MYSQL_ROOT_PASSWORD=5ysZvv7d7iuOe
+            - MYSQL_ROOT_HOST=%
+
+        container_name: mysql
+        hostname: mysql
+        ports:
+            - 3306:3306
+        networks:
+            codo:
+                ipv4_address: 172.22.0.2
+
+    redis:
+        image: redis:6.2
+        restart: always
+        user: root
+        privileged: true
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - ./redis/data:/data
+        environment:
+            - TZ=Asia/Shanghai
+        container_name: redis
+        hostname: redis
+        ports:
+            - 6379:6379
+        networks:
+            codo:
+                ipv4_address: 172.22.0.3
+        command: redis-server --requirepass 5ysZvv7d7iuOe --bind 0.0.0.0 --appendonly yes
+
+    rabbitmq:
+        image: rabbitmq:3.11
+        restart: always
+        user: root
+        privileged: true
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - ./rabbitmq/data:/var/lib/rabbitmq
+        environment:
+            - TZ=Asia/Shanghai
+            - LANG=en_US.UTF-8
+            - RABBITMQ_DEFAULT_USER=admin
+            - RABBITMQ_DEFAULT_PASS=ss1917
+        container_name: rabbitmq
+        hostname: rabbitmq
+        ports:
+            - 15672:15672
+            - 5672:5672
+        networks:
+            codo:
+                ipv4_address: 172.22.0.4
+
+    etcd:
+        image: bitnami/etcd:3.5.7
+        restart: always
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - ./etcd/data:/bitnami/etcd
+        environment:
+            - TZ=Asia/Shanghai
+            - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+            - ALLOW_NONE_AUTHENTICATION=yes
+        container_name: etcd
+        hostname: etcd
+        ports:
+            - 2379:2379
+            - 2380:2380
+        networks:
+            codo:
+                ipv4_address: 172.22.0.5
+
+    gateway:
+        image: registry.cn-hangzhou.aliyuncs.com/codo_images/gateway:latest
+        restart: always
+        container_name: gateway
+        hostname: gateway
+        ports:
+            - 8888:8888
+            - 11000:11000
+        networks:
+            codo:
+                ipv4_address: 172.22.0.6
+        depends_on:
+            - mysql
+            - redis
+            - rabbitmq
+            - etcd
+
+networks:
+    codo:
+        ipam:
+            driver: default
+            config:
+                -   subnet: "172.22.0.0/24"
+                    gateway: 172.22.0.1
+

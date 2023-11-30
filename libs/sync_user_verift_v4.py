@@ -10,7 +10,6 @@ import hashlib
 import json
 import datetime
 import logging
-from loguru import logger
 from concurrent.futures import ThreadPoolExecutor
 from websdk2.cache_context import cache_conn
 from models.authority import Users, Roles, UserRoles, RoleFunctions, Functions, UserToken
@@ -115,7 +114,7 @@ class MyVerify:
 
     def sync_all_permission(self):
         ttl_id = now_timestamp()
-        logger.info(f'全量同步权限到ETCD start {ttl_id} {datetime.datetime.now()}')
+        logging.info(f'全量同步权限到ETCD 开始 {ttl_id}')
 
         api_data = self.api_permissions()
         self.etcd_client.ttl(ttl_id=ttl_id, ttl=720000)
@@ -145,7 +144,7 @@ class MyVerify:
     @deco(RedisLock("async_diff_api_permission_v4_redis_lock_key"))
     def sync_diff_api_permission(self):
         ttl_id = now_timestamp()
-        logger.info(f'差异同步权限到ETCD start {ttl_id} {datetime.datetime.now()}')
+        logging.info(f'差异同步权限到ETCD 开始 {ttl_id}')
         # client = Etcd3Client(hosts=self.etcd_dict.get('DEFAULT_ETCD_HOST_PORT'))
 
         api_data = self.api_permissions()
@@ -196,7 +195,7 @@ class MyVerify:
     @deco(RedisLock("async_token_block_list_redis_lock_key"))
     def token_block_list(self):
         ttl_id = now_timestamp()
-        logger.info(f'async_token_block_list {ttl_id}, {datetime.datetime.now()}')
+        logging.info(f'同步令牌黑名单数据 {ttl_id}')
         with DBContext('r') as session:
             token_info = session.query(UserToken.token_md5).filter(UserToken.status != '0').all()
 
@@ -229,7 +228,7 @@ def get_all_user():
     url = uc_conf['endpoint'] + "/api/all-users"
     response = requests.get(url=url, params=params)
     res = response.json()
-    print(res.get('message'))
+    logging.info(res.get('message'))
     return res.get('data')
 
 
@@ -238,7 +237,7 @@ def sync_user_from_uc():
 
     @deco1(RedisLock("async_all_user_redis_lock_key"))
     def index():
-        logger.info(f'async_all_user_redis_lock_key {datetime.datetime.now()}')
+        logging.info(f'开始同步用户中心数据 {datetime.datetime.now()}')
         with DBContext('w', None, True, **settings) as session:
             for user in get_all_user():
                 user_id = str(user.get('uid'))
@@ -262,8 +261,8 @@ def sync_user_from_uc():
                                                  source="ucenter", tel=user.get('mobile'), status='0',
                                                  avatar=user.get('avatar'), username=user.get('english_name')))
                 except Exception as err:
-                    logger.error(f'\n async_all_user_redis_lock_key Exception {err}')
-        logger.info(f'async_all_user_redis_lock_key end ')
+                    logging.error(f'同步用户中心数据 出错 {err}')
+        logging.info('开始同步用户中心数据 结束')
 
     index()
 
