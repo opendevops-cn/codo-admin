@@ -9,6 +9,7 @@ Desc    : 业务隔离
 """
 
 import json
+import logging
 from abc import ABC
 from datetime import datetime
 from libs.base_handler import BaseHandler
@@ -73,30 +74,58 @@ class BusinessListHandler(BaseHandler, ABC):
         self.get_params_dict()
         self.codo_login()
 
+    @staticmethod
+    def get_biz_map(view_biz, request_tenantid):
+        if request_tenantid:
+            # 使用 next() 寻找第一个匹配的业务，如果没有找到则返回 None
+            the_biz = next((biz for biz in view_biz if biz.get('biz_id') == request_tenantid), None)
+        else:
+            # 使用列表推导式过滤出不包含指定 biz_id 的业务列表
+            the_biz_list = [biz for biz in view_biz if biz.get('biz_id') not in ['501', '502']]
+            the_biz = the_biz_list[0] if the_biz_list else None
+
+        return dict(biz_cn_name=the_biz.get('biz_cn_name'), biz_id=the_biz.get('biz_id')) if the_biz else None
+
     def get(self):
         self.params['is_superuser'] = self.request_is_superuser
         self.params['user_id'] = self.request_user_id
-        # self.params['user'] = self.request_fullname()
         view_biz = get_biz_list_v3(**self.params)
 
-        the_biz_map = dict()
         try:
-            if self.request_tenantid:
-                the_biz_list = list(filter(lambda x: x.get('biz_id') == self.request_tenantid, view_biz))
-                if the_biz_list and isinstance(the_biz_list, list) and len(the_biz_list) == 1:
-                    the_biz = the_biz_list[0]
-                    the_biz_map = dict(biz_cn_name=the_biz.get('biz_cn_name'), biz_id=self.request_tenantid)
-            else:
-                the_biz_list = list(filter(lambda x: x.get('biz_id') not in ['501', '502'], view_biz))
-                if the_biz_list and isinstance(the_biz_list, list) and len(the_biz_list) >= 1:
-                    the_biz = the_biz_list[0]
-                    the_biz_map = dict(biz_cn_name=the_biz.get('biz_cn_name'), biz_id=the_biz.get('biz_id'))
+            the_biz_map = self.get_biz_map(view_biz, self.request_tenantid)
+            if not the_biz_map:
+                the_biz_map = dict(biz_cn_name='默认项目', biz_id='502')
         except Exception as err:
-            print('BusinessHandler', err)
-
-        if not the_biz_map: the_biz_map = dict(biz_cn_name='默认项目', biz_id='502')
+            logging.error(f'Error fetching business list: {err}')
+            the_biz_map = dict(biz_cn_name='默认项目', biz_id='502')
 
         self.write(dict(code=0, msg="获取成功", data=view_biz, the_biz_map=the_biz_map))
+
+    # def get(self):
+    #     self.params['is_superuser'] = self.request_is_superuser
+    #     self.params['user_id'] = self.request_user_id
+    #     # self.params['user'] = self.request_fullname()
+    #     view_biz = get_biz_list_v3(**self.params)
+    #
+    #     the_biz_map = dict()
+    #     try:
+    #         if self.request_tenantid:
+    #             the_biz_list = list(filter(lambda x: x.get('biz_id') == self.request_tenantid, view_biz))
+    #             if the_biz_list and isinstance(the_biz_list, list) and len(the_biz_list) == 1:
+    #                 the_biz = the_biz_list[0]
+    #                 the_biz_map = dict(biz_cn_name=the_biz.get('biz_cn_name'), biz_id=the_biz.get('biz_id'))
+    #         else:
+    #             the_biz_list = list(filter(lambda x: x.get('biz_id') not in ['501', '502'], view_biz))
+    #             if the_biz_list and isinstance(the_biz_list, list) and len(the_biz_list) >= 1:
+    #                 the_biz = the_biz_list[0]
+    #                 the_biz_map = dict(biz_cn_name=the_biz.get('biz_cn_name'), biz_id=the_biz.get('biz_id'))
+    #     except Exception as err:
+    #         logging.error(f'业务列表 请求错误, {err}')
+    #
+    #     if not the_biz_map:
+    #         the_biz_map = dict(biz_cn_name='默认项目', biz_id='502')
+    #
+    #     self.write(dict(code=0, msg="获取成功", data=view_biz, the_biz_map=the_biz_map))
 
     def patch(self):
         #  手动切换  前端记录
