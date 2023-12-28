@@ -16,7 +16,7 @@ from websdk2.utils import mail_login
 from websdk2.model_utils import queryset_to_list, model_to_dict
 import pyotp
 from websdk2.db_context import DBContextV2 as DBContext
-from models.admin_model import Users, Components, RolesComponents, Menus, RoleMenus, UserRoles, Apps, RoleApps
+from models.authority import Users, Components, RolesComponents, Menus, RoleMenus, UserRoles, Apps, RoleApps
 from .configs_init import configs_init
 from websdk2.consts import const
 from websdk2.cache_context import cache_conn

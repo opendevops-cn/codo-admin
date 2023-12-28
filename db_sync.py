@@ -8,7 +8,6 @@ Desc    : 数据表生成
 """
 
 # from models.notice_model import Base
-from models.biz_model import Base as Bbase
 from models.paas_model import Base as AppsBase
 from models.authority import Base as AuBase
 from websdk2.consts import const
@@ -32,7 +31,6 @@ engine = create_engine(
 
 def create():
     # Base.metadata.create_all(engine)
-    Bbase.metadata.create_all(engine)
     AuBase.metadata.create_all(engine)
     AppsBase.metadata.create_all(engine)
     print('[Success] 表结构创建成功!')
@@ -40,7 +38,6 @@ def create():
 
 def drop():
     # Base.metadata.drop_all(engine)
-    Bbase.metadata.drop_all(engine)
     AuBase.metadata.drop_all(engine)
     AppsBase.metadata.drop_all(engine)
 

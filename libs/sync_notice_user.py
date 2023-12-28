@@ -11,7 +11,7 @@ Desc    : 解释一下吧
 import json
 import datetime
 from websdk2.cache_context import cache_conn
-from models.admin_model import Users
+from models.authority import Users
 from models.notice_model import NoticeTemplate, NoticeGroup
 from websdk2.jwt_token import gen_md5
 from websdk2.consts import const

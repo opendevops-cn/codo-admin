@@ -116,7 +116,7 @@ class SystemSettings(TimeBaseModel, Base):
 
 
 class StorageMG(TimeBaseModel, Base):
-    __tablename__ = 'mg_storage'
+    __tablename__ = 'codo_mg_storage'
 
     # 用户上传数据记录
     id = Column('id', Integer, primary_key=True, autoincrement=True)

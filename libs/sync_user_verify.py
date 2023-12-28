@@ -11,7 +11,7 @@ import json
 import datetime
 import logging
 from websdk2.cache_context import cache_conn
-from models.admin_model import Users, UserRoles, RoleFunctions, Functions, UserToken
+from models.authority import Users, UserRoles, RoleFunctions, Functions, UserToken
 from settings import settings
 from websdk2.tools import RedisLock
 from websdk2.db_context import DBContextV2 as DBContext

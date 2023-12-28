@@ -55,15 +55,15 @@
 │   ├── handlers
 │   │   ├── app_mg_handler.py
 │   │   ├── app_settings_handler.py
-│   │   ├── components_handler.py
+│   │   ├── components_v4_handler.py
 │   │   ├── configs_init.py
-│   │   ├── functions_handler.py
+│   │   ├── functions_v4_handler.py
 │   │   ├── __init__.py
 │   │   ├── login_handler.py
-│   │   ├── menus_handler.py
+│   │   ├── menus_v4_handler.py
 │   │   ├── notifications_handler.py
 │   │   ├── roles_handler.py
-│   │   ├── users_handler.py
+│   │   ├── users_v4_handler.py
 │   │   └── verify_handler.py
 │   ├── __init__.py
 │   └── subscribe.py

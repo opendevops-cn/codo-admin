@@ -13,7 +13,7 @@ from libs.object_storage import OSSApi
 from websdk2.db_context import DBContextV2 as DBContext
 from models.paas_model import StorageMG
 
-
+# TODO 待测试优化
 class StoragePrivate(BaseHandler):
 
     def prepare(self):
