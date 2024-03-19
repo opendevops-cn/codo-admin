@@ -22,7 +22,7 @@ from websdk2.consts import const
 class RedisSubscriber:
 
     def __init__(self, service='gw1', channel='gw', **settings):
-        ### 订阅日志使用默认redis 如果有需求 请自行修改配置
+        # 订阅日志使用默认redis 如果有需求 请自行修改配置
         self.consumer_name = f"{service}-{uuid()[0:8]}"
         self.group_name = "gw-consumer-group"
         self.stream_name = channel
@@ -41,7 +41,7 @@ class RedisSubscriber:
     @staticmethod
     def process_message(msg_id, fields):
         if 'test' in fields: return {}
-        logging.info(msg_id)
+        # logging.info(msg_id)
 
         log_data = list(fields.values())[0]
         log_data_dict = json.loads(log_data)
@@ -82,7 +82,7 @@ class RedisSubscriber:
         start_time = int(start_time) / 1000
         times = datetime.datetime.fromtimestamp(start_time)
         log_data_dict['start_time'] = times
-        logging.info(log_data_dict)
+        # logging.info(log_data_dict)
         return log_data_dict
 
     def create_consumer_group(self, stream_name, group_name):
@@ -92,15 +92,15 @@ class RedisSubscriber:
             ret = self.redis_conn.xgroup_create(stream_name, group_name, id=0)
             print(ret)
         except Exception as err:
-            print('create_consumer_group', err)
+            logging.debug('create_consumer_group', err)
 
     def stream_message(self, stream_name):
         """stream and groups info"""
         logging.info(f'stream info: {self.redis_conn.xinfo_stream(stream_name)}')
         logging.info(f'groups info: {self.redis_conn.xinfo_groups(stream_name)}')
 
-    def subscribe_msgs(self, consumer_name):
-        logging.info(f"Consumer {consumer_name} starting...")
+    def subscribe_msgs(self):
+        logging.info(f"Consumer {self.consumer_name} starting...")
         lastid = '0-0'
         check_backlog = True
         while True:
@@ -108,8 +108,8 @@ class RedisSubscriber:
 
             # block 0 时阻塞等待, 其他数值表示读取超时时间
             try:
-                print(self.group_name, consumer_name, {self.stream_name: consumer_id})
-                items = self.redis_conn.xreadgroup(self.group_name, consumer_name, {self.stream_name: consumer_id},
+                # print(self.group_name, self.consumer_name, {self.stream_name: consumer_id})
+                items = self.redis_conn.xreadgroup(self.group_name, self.consumer_name, {self.stream_name: consumer_id},
                                                    block=0, count=1)
             except Exception as err:
                 print(err)
@@ -141,11 +141,15 @@ class RedisSubscriber:
                 self.redis_conn.xack(self.stream_name, self.group_name, id)
             time.sleep(2)  # 间隔时长，自取
 
-    def start_server(self):
+    def start_server_old(self):
         print('start', datetime.datetime.now())
         # print(self.consumer_name)
         # consumer_name_list = [f'{self.consumer_name}1', f'{self.consumer_name}2', f'{self.consumer_name}3']
-        self.subscribe_msgs(self.consumer_name)
+        self.subscribe_msgs()
 
         # with ThreadPoolExecutor() as executor:
         #     executor.map(self.subscribe_msgs, consumer_name_list)
+
+    def start_server(self):
+        executor = ThreadPoolExecutor(max_workers=1)
+        executor.submit(self.subscribe_msgs)

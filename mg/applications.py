@@ -12,6 +12,7 @@ from websdk2.application import Application as myApplication
 # from libs.feature_application import Application as myApplication
 from libs.sync_user_verift_v4 import async_api_permission_v4, async_user_center
 from mg.handlers import urls
+from mg.subscribe import RedisSubscriber as SubApp
 
 
 class Application(myApplication, ABC):
@@ -24,6 +25,8 @@ class Application(myApplication, ABC):
         check_callback_v4 = PeriodicCallback(async_api_permission_v4, 300000)  # 300000 五分钟
         check_callback_v4.start()
         super(Application, self).__init__(urls, **settings)
+        self.sub_app = SubApp(**settings)
+        self.sub_app.start_server()
 
 
 if __name__ == '__main__':
