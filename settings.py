@@ -17,8 +17,8 @@ cookie_secret = '61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2X6TP1o/Vo='
 token_secret = "pXFb44gfdh96(3df&%18iodGq4ODQyMzc4"
 max_body_size = 3 * 1024 * 1024 * 1024
 max_buffer_size = 3 * 1024 * 1024 * 1024
-etcd_prefix = "/my/gw/"
 
+etcd_prefix = os.getenv('DEFAULT_ETCD_PREFIX', '/codo/gw/')
 DEFAULT_DB_DBHOST = os.getenv('DEFAULT_DB_DBHOST', '192.168.0.111')
 DEFAULT_DB_DBPORT = os.getenv('DEFAULT_DB_DBPORT', 3306)
 DEFAULT_DB_DBUSER = os.getenv('DEFAULT_DB_DBUSER', 'root')
