@@ -28,9 +28,12 @@ engine = create_engine(
 
 
 def create():
-    AuBase.metadata.create_all(engine)
-    AppsBase.metadata.create_all(engine)
-    print('[Success] 表结构创建成功!')
+    try:
+        AuBase.metadata.create_all(engine)
+        AppsBase.metadata.create_all(engine)
+        print('[Success] 表结构创建成功!')
+    except Exception as err:
+        print(f'[Error] {err}!')
 
 
 def drop():

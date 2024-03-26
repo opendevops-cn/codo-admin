@@ -27,5 +27,5 @@ RUN pip install -r docs/requirements.txt &> /dev/null && \
 EXPOSE 8000
 CMD /data/run-py.sh ${SERVICE_NAME}
 
-### docker build --no-cache --build-arg SERVICE_NAME=admin-mg-api  . -t ops_mg_image
+### docker build --no-cache --build-arg SERVICE_NAME=admin-mg-api  . -t codo-admin-image
 ### docker build --no-cache --build-arg SERVICE_NAME=gw_log  . -t ops_mg_log_image
