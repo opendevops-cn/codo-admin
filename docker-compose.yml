@@ -1,24 +1,22 @@
-# docker-compose.yml
-
 version: '3'
+
+# 定义网络
 networks:
     codo:
+
+# 定义服务
 services:
     codo_mg:
+        # 容器重启策略
         restart: unless-stopped
+        # 使用的镜像
         image: codo-admin-image
+        # 使用的网络
         networks:
             - codo
+        # 挂载卷
         volumes:
             - /sys/fs/cgroup:/sys/fs/cgroup
+        # 端口映射
         ports:
-            - "8010:8000"
-#    gw_log:
-#        restart: unless-stopped
-#        image: ops_mg_log_image
-#        networks:
-#            - codo
-#        volumes:
-#            - /sys/fs/cgroup:/sys/fs/cgroup
-#        depends_on:
-#            - codo_mg
+            - "8010:8000"    # 将容器的 8000 端口映射到主机的 8010 端口
