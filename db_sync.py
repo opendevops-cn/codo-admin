@@ -22,7 +22,6 @@ engine = create_engine(
     f'{default_configs.get(const.DBPWD_KEY)}@{default_configs.get(const.DBHOST_KEY)}:'
     f'{default_configs.get(const.DBPORT_KEY)}/{default_configs.get(const.DBNAME_KEY)}'
     f'?charset=utf8mb4',
-    encoding='utf-8',
     echo=True
 )
 
