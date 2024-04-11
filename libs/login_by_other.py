@@ -67,8 +67,6 @@ class OtherAuthV3:
             str_md5 = md5.hexdigest()  # 加密后的字符串
             return str_md5
 
-        # uc_conf = settings.get('uc_conf')
-
         now = int(time.time())
         params = {
             "app_id": "devops",

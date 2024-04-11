@@ -5,6 +5,7 @@ author : shenshuo
 date   : 2017年11月15日
 role   : 权限同步和鉴定
 """
+import json
 import time
 import hashlib
 import datetime
@@ -30,6 +31,8 @@ def get_all_user():
         return str_md5
 
     uc_conf = settings.get('uc_conf')
+    if not isinstance(uc_conf, dict):
+        uc_conf = json.loads(uc_conf)
 
     now = int(time.time())
     params = {

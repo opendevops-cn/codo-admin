@@ -13,8 +13,8 @@ ROOT_DIR = os.path.dirname(__file__)
 debug = True
 xsrf_cookies = False
 expire_seconds = 365 * 24 * 60 * 60
-cookie_secret = '61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2X6TP1o/Vo='
-token_secret = "pXFb44gfdh96(3df&%18iodGq4ODQyMzc4"
+cookie_secret = os.getenv('DEFAULT_COOKIE_SECRET', '61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2X6TP1o/Vo=')
+token_secret = os.getenv('DEFAULT_TOKEN_SECRET', 'pXFb44gfdh96(3df&%18iodGq4ODQyMzc4')
 max_body_size = 3 * 1024 * 1024 * 1024
 max_buffer_size = 3 * 1024 * 1024 * 1024
 
@@ -42,12 +42,12 @@ DEFAULT_ETCD_HOST_PORT = os.getenv('DEFAULT_ETCD_HOST_PORT', (("10.10.6.154", 23
 DEFAULT_ETCD_PROTOCOL = os.getenv('DEFAULT_ETCD_PROTOCOL', 'http')
 DEFAULT_REDIS_USER = os.getenv('DEFAULT_REDIS_USER', None)
 DEFAULT_ETCD_PASSWORD = os.getenv('DEFAULT_ETCD_PASSWORD', None)
-api_gw = ""  # 网关
-settings_auth_key = ""  # 服务之间认证
-notice_conf_map = {}  # 通知中心使用
-oss_data_private = {}  ### 上传私有仓库使用
-###
-uc_conf = {}  # 从用户中心同步数据
+
+api_gw = os.getenv('CODO_API_GW', "")  # 网关
+settings_auth_key = os.getenv('CODO_AUTH_KEY', "")  # 服务之间认证token
+oss_data_private = {}  # 上传私有仓库使用
+uc_conf = {}  # 用户中心配置
+
 try:
     from local_settings import *
 except:
@@ -64,7 +64,6 @@ settings = dict(
     uc_conf=uc_conf,
     api_gw=api_gw,
     settings_auth_key=settings_auth_key,
-    notice_conf_map=notice_conf_map,
     oss_data_private=oss_data_private,
     etcd_prefix=etcd_prefix,
     app_name='codo_mg',
