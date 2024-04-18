@@ -221,12 +221,11 @@ class Etcd3Client:
                 "lease": self.lease_to_id(lease),
                 "prev_kv": prev_kv
             }
-
             resp = self.conn.post(url=url, headers=headers, data=json.dumps(params), timeout=self.timeout)
             return True if resp.status_code == 200 else False
 
         except Exception as e:
-            print(e)
+            logging.info(e)
             self.error = str(e)
 
     def delete(self, key, value, lease=None, prev_kv=False):

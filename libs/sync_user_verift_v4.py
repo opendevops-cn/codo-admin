@@ -19,6 +19,7 @@ from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.tools import now_timestamp, convert
 from websdk2.jwt_token import gen_md5
 from websdk2.configs import configs
+from websdk2.consts import const
 from services.role_service import get_all_user_list_for_role
 from libs.etcd import Etcd3Client
 
@@ -27,10 +28,7 @@ import requests
 if configs.can_import: configs.import_dict(**settings)
 from websdk2.model_utils import insert_or_update
 
-try:
-    requests.packages.urllib3.disable_warnings()
-except:
-    pass
+requests.packages.urllib3.disable_warnings()
 
 
 def deco(cls, release=False):
@@ -67,13 +65,14 @@ class MyVerify:
     def __init__(self, is_superuser=False, **kwargs):
         self.redis_conn = cache_conn()
         if "etcds" not in settings: raise SystemExit('找不到ETCD配置')
-        self.etcd_dict = settings.get('etcds').get('DEFAULT_ETCD_KEY')
+        self.etcd_dict = settings.get('etcds').get(const.DEFAULT_ETCD_KEY)
         self.etcd_prefix = settings.get('etcd_prefix', '/')
         self.crbac_prefix = f"{self.etcd_prefix}codorbac/"
         self.token_block_prefix = f"{self.etcd_prefix}tokenblock/"
         self.is_superuser = is_superuser
         self.method_list = ["GET", "POST", "PATCH", "DELETE", "PUT", "ALL"]
-        self.etcd_client = Etcd3Client(hosts=self.etcd_dict.get('DEFAULT_ETCD_HOST_PORT'))
+        self.etcd_client = Etcd3Client(host=self.etcd_dict.get(const.DEFAULT_ETCD_HOST),
+                                       port=self.etcd_dict.get(const.DEFAULT_ETCD_PORT))
 
     @staticmethod
     def api_permissions():
@@ -136,6 +135,8 @@ class MyVerify:
             }
             key = f"{self.crbac_prefix}{func_id}{match_key}"
             self.etcd_client.put(key, json.dumps(value), lease=ttl_id)
+
+        # logging.info(f'全量同步权限到ETCD 结束 {ttl_id}')
 
     @deco1(RedisLock("async_all_api_permission_v4_redis_lock_key"))
     def sync_all_api_permission(self):

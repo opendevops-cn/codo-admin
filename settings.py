@@ -13,10 +13,10 @@ ROOT_DIR = os.path.dirname(__file__)
 debug = True
 xsrf_cookies = False
 expire_seconds = 365 * 24 * 60 * 60
-cookie_secret = os.getenv('DEFAULT_COOKIE_SECRET', '61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2X6TP1o/Vo=')
-token_secret = os.getenv('DEFAULT_TOKEN_SECRET', 'pXFb44gfdh96(3df&%18iodGq4ODQyMzc4')
 max_body_size = 3 * 1024 * 1024 * 1024
 max_buffer_size = 3 * 1024 * 1024 * 1024
+cookie_secret = os.getenv('DEFAULT_COOKIE_SECRET', '61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2X6TP1o/Vo=')
+token_secret = os.getenv('DEFAULT_TOKEN_SECRET', 'pXFb44gfdh96(3df&%18iodGq4ODQyMzc4')
 
 etcd_prefix = os.getenv('DEFAULT_ETCD_PREFIX', '/codo/gw/')
 DEFAULT_DB_DBHOST = os.getenv('DEFAULT_DB_DBHOST', '192.168.0.111')
@@ -38,10 +38,12 @@ DEFAULT_REDIS_AUTH = os.getenv('DEFAULT_REDIS_AUTH', True)
 DEFAULT_REDIS_CHARSET = os.getenv('DEFAULT_REDIS_CHARSET', 'utf-8')
 DEFAULT_REDIS_PASSWORD = os.getenv('DEFAULT_REDIS_PASSWORD', '')
 
-DEFAULT_ETCD_HOST_PORT = os.getenv('DEFAULT_ETCD_HOST_PORT', (("10.10.6.154", 2379), ("10.10.6.154", 2379)))
+# DEFAULT_ETCD_HOST_PORT = os.getenv('DEFAULT_ETCD_HOST_PORT', (("10.10.6.154", 2379), ("10.10.6.154", 2379)))
+DEFAULT_ETCD_HOST = os.getenv('DEFAULT_ETCD_HOST', "10.10.6.154")
+DEFAULT_ETCD_PORT = os.getenv('DEFAULT_ETCD_PORT', 2379)
 DEFAULT_ETCD_PROTOCOL = os.getenv('DEFAULT_ETCD_PROTOCOL', 'http')
-DEFAULT_REDIS_USER = os.getenv('DEFAULT_REDIS_USER', None)
-DEFAULT_ETCD_PASSWORD = os.getenv('DEFAULT_ETCD_PASSWORD', None)
+DEFAULT_ETCD_USER = os.getenv('DEFAULT_ETCD_USER', None)
+DEFAULT_ETCD_PWD = os.getenv('DEFAULT_ETCD_PWD', None)
 
 api_gw = os.getenv('CODO_API_GW', "")  # 网关
 settings_auth_key = os.getenv('CODO_AUTH_KEY', "")  # 服务之间认证token
@@ -94,11 +96,12 @@ settings = dict(
         }
     },
     etcds={
-        "DEFAULT_ETCD_KEY": {
-            "DEFAULT_ETCD_HOST_PORT": DEFAULT_ETCD_HOST_PORT,
-            "DEFAULT_ETCD_PROTOCOL": DEFAULT_ETCD_PROTOCOL,
-            "DEFAULT_REDIS_USER": DEFAULT_REDIS_USER,
-            "DEFAULT_ETCD_PASSWORD": DEFAULT_ETCD_PASSWORD,
+        const.DEFAULT_ETCD_KEY: {
+            const.DEFAULT_ETCD_HOST: DEFAULT_ETCD_HOST,
+            const.DEFAULT_ETCD_PORT: DEFAULT_ETCD_PORT,
+            const.DEFAULT_ETCD_PROTOCOL: DEFAULT_ETCD_PROTOCOL,
+            const.DEFAULT_ETCD_USER: DEFAULT_ETCD_USER,
+            const.DEFAULT_ETCD_PWD: DEFAULT_ETCD_PWD,
         }
     }
 )
