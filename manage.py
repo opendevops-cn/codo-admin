@@ -19,8 +19,8 @@ engine = create_engine(
     f'?charset=utf8mb4',
 )
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SQL_FOLDER = os.path.join(BASE_DIR, 'codo-adminv4', 'docs', 'sql')
+BASE_DIR = os.getcwd()
+SQL_FOLDER = os.path.join(BASE_DIR, 'docs', 'sql')
 
 
 def calculate_md5(input_string):
