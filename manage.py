@@ -98,7 +98,7 @@ class CreateSuperUser(BaseCommand):
         (SELECT * FROM `codo_a_users` WHERE username = '{create_time}')"""
         with engine.connect() as conn:
             try:
-                conn.execute(raw)
+                conn.execute(text(raw))
             except Exception as e:
                 print(f"Create SuperUser Error: {e}")
                 sys.exit(1)
