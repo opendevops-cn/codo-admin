@@ -64,9 +64,19 @@ class UserHandler(BaseHandler, ABC):
 
     def put(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        if 'last_login' in data: data.pop('last_login')
-        # if 'username' in data: data.pop('username')
-        if 'fs_open_id' not in data: data['fs_open_id'] = ''
+
+        string_fields = ['avatar', 'source', 'source_account_id', 'manager', 'dd_id', 'fs_open_id', 'fs_id']
+        for field in string_fields:
+            if field in data and data[field] is None:
+                data[field] = ''
+
+        # Ensure ext_info field is a valid dictionary
+        if 'ext_info' in data and data['ext_info'] is None:
+            data['ext_info'] = {}
+
+        if 'last_login' in data:
+            data.pop('last_login')
+
         res = opt_obj.handle_update(data)
         self.write(res)
 

@@ -95,8 +95,14 @@ class LoginHandler(RequestHandler, ABC):
 
     #
     @staticmethod
-    def update_login_ip(user_id, login_ip_list):
+    def update_login_ip(user_id: str, login_ip_list: str):
         try:
+            if not isinstance(user_id, str):
+                raise ValueError("Invalid user_id")
+
+            if not isinstance(login_ip_list, str):
+                raise ValueError("Invalid login_ip_list")
+            
             login_ip = login_ip_list.split(",")[0]
             with DBContext('w', None, True) as session:
                 session.query(Users).filter(Users.id == user_id).update({Users.last_ip: login_ip})
