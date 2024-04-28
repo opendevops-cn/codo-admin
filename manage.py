@@ -63,9 +63,12 @@ class DBInit(BaseCommand):
                 with open(file_path, 'r') as file:
                     for line in file.readlines():
                         with engine.connect() as conn:
+                            trans = conn.begin()
                             try:
                                 conn.execute(text(line.strip()))
+                                trans.commit()
                             except Exception as e:
+                                trans.rollback()
                                 err_cnt += 1
                                 print(
                                     f"Executed SQL file: {filename} error, sql:{line}, msg: {e}")
@@ -91,16 +94,19 @@ class CreateSuperUser(BaseCommand):
         password = getpass.getpass("Enter password: ")
         create_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         raw = f"""INSERT INTO `codo_a_users` (`create_time`, `update_time`, 
-        `username`,`password`, `nickname`, `email`, `superuser`) 
+        `username`,`password`, `nickname`, `email`, `superuser`, `status`) 
         SELECT '{create_time}', '{create_time}', '{username}', 
-        '{calculate_md5(password)}', '{nickname}','{email}', '0' 
+        '{calculate_md5(password)}', '{nickname}','{email}', '0', '0' 
         FROM dual WHERE NOT EXISTS 
         (SELECT * FROM `codo_a_users` WHERE username = '{create_time}')"""
         with engine.connect() as conn:
+            trans = conn.begin()
             try:
                 conn.execute(text(raw))
+                trans.commit()
             except Exception as e:
                 print(f"Create SuperUser Error: {e}")
+                trans.rollback()
                 sys.exit(1)
             else:
                 print(f"Create SuperUser Success: {username}")
