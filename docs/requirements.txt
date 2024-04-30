@@ -1,7 +1,4 @@
-cryptography==39.0.2
 pyotp===2.4.1
-redis==4.5.1
-PyJWT==2.0.1
 aliyun-python-sdk-dyvmsapi==3.0.2
 aliyun-python-sdk-dysmsapi
 aliyun-python-sdk-core-v3==2.13.11
@@ -10,4 +7,3 @@ oss2==2.14.0
 cos-python-sdk-v5==1.9.25
 pydantic===2.3.0
 SQLAlchemy===2.0.20
-tornado===6.3.3
