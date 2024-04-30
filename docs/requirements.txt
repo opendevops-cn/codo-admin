@@ -1,6 +1,6 @@
 cryptography==39.0.2
 pyotp===2.4.1
-redis==4.5.1
+redis==4.5.4
 PyJWT==2.0.1
 aliyun-python-sdk-dyvmsapi==3.0.2
 aliyun-python-sdk-dysmsapi
