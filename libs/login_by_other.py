@@ -8,14 +8,16 @@ Date    : 2021/1/7 11:24
 Desc    : 解释一下吧
 """
 
-import time
-import requests
+import base64
 import hashlib
+import json
+import requests
+import time
+
+from cryptography.fernet import Fernet
 from websdk2.db_context import DBContextV2 as DBContext
 from models.authority import Users
-import base64
-import json
-from cryptography.fernet import Fernet
+
 
 
 class OtherAuthV2:
