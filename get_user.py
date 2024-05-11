@@ -10,11 +10,10 @@ import time
 import hashlib
 import datetime
 import logging
+import requests
 from models.authority import Users
 from settings import settings
 from websdk2.db_context import DBContextV2 as DBContext
-
-import requests
 from websdk2.model_utils import insert_or_update
 
 try:
@@ -41,7 +40,7 @@ def get_all_user():
         "token": uc_conf['token'],
         "timestamp": now
     }
-    url = uc_conf['endpoint'] + "/api/all-users"
+    url = uc_conf['endpoint'] + "/api/all-users-4-outer"
     response = requests.get(url=url, params=params)
     res = response.json()
     print(res.get('message'))

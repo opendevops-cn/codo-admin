@@ -5,28 +5,27 @@ author : shenshuo
 date   : 2017年11月15日
 role   : 权限同步和鉴定
 """
+
 import time
 import hashlib
 import json
 import datetime
 import logging
+import requests
 from concurrent.futures import ThreadPoolExecutor
-from websdk2.cache_context import cache_conn
-from models.authority import Users, Roles, UserRoles, RoleFunctions, Functions, UserToken
 from settings import settings
-from websdk2.tools import RedisLock
+from websdk2.consts import const
+from websdk2.cache_context import cache_conn
 from websdk2.db_context import DBContextV2 as DBContext
-from websdk2.tools import now_timestamp, convert
+from websdk2.tools import RedisLock, now_timestamp, convert
 from websdk2.jwt_token import gen_md5
 from websdk2.configs import configs
-from websdk2.consts import const
+from websdk2.model_utils import insert_or_update
 from services.role_service import get_all_user_list_for_role
 from libs.etcd import Etcd3Client
-
-import requests
+from models.authority import Users, Roles, UserRoles, RoleFunctions, Functions, UserToken
 
 if configs.can_import: configs.import_dict(**settings)
-from websdk2.model_utils import insert_or_update
 
 requests.packages.urllib3.disable_warnings()
 
@@ -38,7 +37,7 @@ def deco(cls, release=False):
             try:
                 return func(*args, **kwargs)
             finally:
-                ### 执行完就释放key，默认不释放
+                # 执行完就释放key，默认不释放
                 if release: cls.release(cls)
 
         return __deco
@@ -53,7 +52,7 @@ def deco1(cls, release=False):
             try:
                 return func(*args, **kwargs)
             finally:
-                ### 执行完就释放key，默认不释放
+                # 执行完就释放key，默认不释放
                 if release: cls.release(cls)
 
         return __deco
@@ -226,7 +225,7 @@ def get_all_user():
         "token": uc_conf['token'],
         "timestamp": now
     }
-    url = uc_conf['endpoint'] + "/api/all-users"
+    url = uc_conf['endpoint'] + "/api/all-users-4-outer"
     response = requests.get(url=url, params=params)
     res = response.json()
     logging.info(res.get('message'))
