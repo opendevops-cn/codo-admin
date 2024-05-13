@@ -144,8 +144,7 @@ class MyVerify:
     @deco(RedisLock("async_diff_api_permission_v4_redis_lock_key"))
     def sync_diff_api_permission(self):
         ttl_id = now_timestamp()
-        logging.info(f'差异同步权限到ETCD 开始 {ttl_id}')
-        # client = Etcd3Client(hosts=self.etcd_dict.get('DEFAULT_ETCD_HOST_PORT'))
+        logging.info(f'差异同步权限到ETCD 检查开始 {ttl_id}')
 
         api_data = self.api_permissions()
         self.etcd_client.ttl(ttl_id=ttl_id, ttl=72000)
@@ -267,6 +266,44 @@ def sync_user_from_uc():
     index()
 
 
+def sync_user_to_gw():
+    @deco1(RedisLock("async_all_user_to_gw_redis_lock_key"))
+    def index():
+        logging.info(f'同步用户信息到网关ETCD 开始检查！')
+        etcd_dict = settings.get('etcds').get(const.DEFAULT_ETCD_KEY)
+        etcd_client = Etcd3Client(host=etcd_dict.get(const.DEFAULT_ETCD_HOST),
+                                  port=etcd_dict.get(const.DEFAULT_ETCD_PORT))
+        redis_conn = cache_conn()
+        users_dict = {}
+        etcd_prefix = settings.get('etcd_prefix', '/')
+        user_list_prefix = f"{etcd_prefix}uc/userinfo/"
+        user_list_key = "user_list_md5_for_sync_user_to_gw"
+        with DBContext('r', None, True, **settings) as session:
+            for user in session.query(Users).all():
+                users_dict[user.id] = dict(email=user.email, uid=user.source_account_id)
+            user_list_md5 = gen_md5(json.dumps(users_dict))
+            old_user_list_md5 = redis_conn.get(user_list_key)
+            if old_user_list_md5:
+                old_user_list_md5 = convert(old_user_list_md5)
+            if old_user_list_md5 == user_list_md5:
+                return
+            redis_conn.set(user_list_key, user_list_md5, ex=720000)
+
+        ttl_id = now_timestamp()
+        logging.info(f'同步用户信息到网关ETCD 开始 {ttl_id}')
+        etcd_client.ttl(ttl_id=ttl_id, ttl=720000)
+        for user in get_all_user():
+            email = user.get('email')
+            key = f"{user_list_prefix}{email}"
+            etcd_client.put(key, json.dumps(user), lease=ttl_id)
+        logging.info('同步用户信息到网关ETCD 结束！')
+
+    try:
+        index()
+    except Exception as err:
+        logging.error(f"同步用户信息到网关ETCD 出错：{err}")
+
+
 @deco(RedisLock("async_role_users_redis_lock_key"))
 def sync_all_user_list_for_role():
     get_all_user_list_for_role()
@@ -279,6 +316,7 @@ def async_api_permission_v4():
     executor.submit(obj.sync_diff_api_permission)
     executor.submit(obj.sync_all_api_permission)
     executor.submit(sync_all_user_list_for_role)
+    executor.submit(sync_user_to_gw)
     # executor.submit(obj.token_block_list)
 
 
