@@ -102,7 +102,7 @@ class LoginHandler(RequestHandler, ABC):
 
             if not isinstance(login_ip_list, str):
                 raise ValueError("Invalid login_ip_list")
-            
+
             login_ip = login_ip_list.split(",")[0]
             with DBContext('w', None, True) as session:
                 session.query(Users).filter(Users.id == user_id).update({Users.last_ip: login_ip})
@@ -113,7 +113,7 @@ class LoginHandler(RequestHandler, ABC):
     @gen.coroutine
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        # print(data)
+        print(data)
         username = data.get('username')
         password = data.get('password')
         dynamic = data.get('dynamic')

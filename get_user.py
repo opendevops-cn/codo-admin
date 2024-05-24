@@ -80,3 +80,37 @@ def sync_user_from_ucenter():
 
 
 sync_user_from_ucenter()
+
+# dict1 = api_permissions()
+# dict2 = api_permissions_v2()
+# # 对比两字典的每一对键值对
+# for key in dict1.keys():
+#     if key in dict2:
+#         if dict1[key] != dict2[key]:
+#             print(f"不一致Key: {key}, Dict1 Value: {dict1[key]}, Dict2 Value: {dict2[key]}")
+#     else:
+#         print(f"Key: {key}, Dict1 Value: {dict1[key]}, Dict2 Value: <not present>")
+# #
+# if dict1 == dict2:
+#     print("The JSON objects are equal")
+# else:
+#     print("The JSON objects are different")
+#
+#
+# def get_md5_hash(data):
+#     # 将字典转换为排序后的 JSON 字符串
+#     json_str = json.dumps(data, sort_keys=True)
+#     # 计算 JSON 字符串的 MD5 哈希值
+#     return hashlib.md5(json_str.encode()).hexdigest()
+#
+#
+# hash1 = get_md5_hash(dict1)
+# hash2 = get_md5_hash(dict2)
+#
+# print(f"Hash of dict1: {hash1}")
+# print(f"Hash of dict2: {hash2}")
+#
+# if hash1 == hash2:
+#     print("dict1 and dict2 are equal")
+# else:
+#     print("dict1 and dict2 are different")

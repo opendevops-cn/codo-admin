@@ -73,8 +73,48 @@ class MyVerify:
         self.etcd_client = Etcd3Client(host=self.etcd_dict.get(const.DEFAULT_ETCD_HOST),
                                        port=self.etcd_dict.get(const.DEFAULT_ETCD_PORT))
 
+    # 2024年5月14日 优化查询 v2
     @staticmethod
-    def api_permissions():
+    def get_role_info(session, role_id):
+        role = session.query(Roles).filter(Roles.id == role_id).first()
+        if not role:
+            return None, []
+        _role_list = [role_id]
+        if role.role_type == 'normal' and role.role_subs:
+            _role_list.extend(role.role_subs)
+        return role, set(_role_list)
+
+    def api_permissions(self):
+        # 超级用户网关直接放行
+        api_permissions_dict = dict()
+
+        with DBContext('r') as session:
+            role_list = session.query(UserRoles).all()
+            roles = {role.id: role for role in
+                     session.query(Roles).filter(Roles.id.in_([i.role_id for i in role_list])).all()}
+
+        for i in role_list:
+            role = roles.get(i.role_id)
+            if not role:
+                continue
+
+            role, _role_list = self.get_role_info(session, i.role_id)
+            func_list = session.query(
+                Functions.id, Functions.func_name, Functions.app_code, Functions.uri, Functions.method_type
+            ).outerjoin(RoleFunctions, Functions.id == RoleFunctions.func_id
+                        ).filter(Functions.status == '0', RoleFunctions.role_id.in_(_role_list)).all()
+
+            for func in func_list:
+                key = f"{func.id}---{func.func_name}---{func.app_code}---{func.uri}---{func.method_type}"
+                val = i.user_id
+                if key in api_permissions_dict:
+                    api_permissions_dict[key][val] = "y"
+                else:
+                    api_permissions_dict[key] = {val: "y"}
+        return api_permissions_dict
+
+    @staticmethod
+    def api_permissions_bak():
         # 超级用户网关直接放行
         api_permissions_dict = dict()
 
