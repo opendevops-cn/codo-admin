@@ -307,6 +307,10 @@ def sync_user_from_uc():
 
 
 def sync_user_to_gw():
+    """
+    本数据提供给网关，用来和其他系统做SSO
+    """
+
     @deco1(RedisLock("async_all_user_to_gw_redis_lock_key"))
     def index():
         logging.info(f'同步用户信息到网关ETCD 开始检查！')
@@ -320,7 +324,10 @@ def sync_user_to_gw():
         user_list_key = "user_list_md5_for_sync_user_to_gw"
         with DBContext('r', None, True, **settings) as session:
             for user in session.query(Users).all():
-                users_dict[user.id] = dict(email=user.email, uid=user.source_account_id)
+                # users_dict[user.id] = dict(email=user.email, uid=user.source_account_id)
+                uid = user.source_account_id
+                users_dict[uid] = dict(email=user.email, uid=uid, codo_user_id=user.id,
+                                       codo_is_superuser=user.superuser)
             user_list_md5 = gen_md5(json.dumps(users_dict))
             old_user_list_md5 = redis_conn.get(user_list_key)
             if old_user_list_md5:
@@ -335,6 +342,11 @@ def sync_user_to_gw():
         for user in get_all_user():
             email = user.get('email')
             key = f"{user_list_prefix}{email}"
+            uid = user.get('uid')
+            user_dict = users_dict.get(str(uid))
+            if isinstance(user_dict, dict):
+                user['codo_user_id'] = user_dict.get('codo_user_id')
+                user['codo_is_superuser'] = True if user_dict.get('codo_is_superuser') == '0' else False
             etcd_client.put(key, json.dumps(user), lease=ttl_id)
         logging.info('同步用户信息到网关ETCD 结束！')
 
