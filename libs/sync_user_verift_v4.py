@@ -60,6 +60,21 @@ def deco1(cls, release=False):
     return _deco
 
 
+def deco2(cls, release=False):
+    def _deco(func):
+        def __deco(*args, **kwargs):
+            if not cls.get_lock(cls, key_timeout=7200, func_timeout=120): return False
+            try:
+                return func(*args, **kwargs)
+            finally:
+                # 执行完就释放key，默认不释放
+                if release: cls.release(cls)
+
+        return __deco
+
+    return _deco
+
+
 class MyVerify:
     def __init__(self, is_superuser=False, **kwargs):
         self.redis_conn = cache_conn()
@@ -87,6 +102,7 @@ class MyVerify:
     def api_permissions(self):
         # 超级用户网关直接放行
         api_permissions_dict = dict()
+        # logging.error(check_user_func_list_md5())
 
         with DBContext('r') as session:
             role_list = session.query(UserRoles).all()
@@ -152,8 +168,7 @@ class MyVerify:
 
     def sync_all_permission(self):
         ttl_id = now_timestamp()
-        logging.info(f'全量同步权限到ETCD 开始 {ttl_id}')
-
+        logging.info(f'全量同步权限到ETCD 准备 {ttl_id}')
         api_data = self.api_permissions()
         self.etcd_client.ttl(ttl_id=ttl_id, ttl=720000)
 
@@ -175,9 +190,9 @@ class MyVerify:
             key = f"{self.crbac_prefix}{func_id}{match_key}"
             self.etcd_client.put(key, json.dumps(value), lease=ttl_id)
 
-        # logging.info(f'全量同步权限到ETCD 结束 {ttl_id}')
+        logging.info(f'全量同步权限到ETCD 结束 {ttl_id}')
 
-    @deco1(RedisLock("async_all_api_permission_v4_redis_lock_key"))
+    @deco2(RedisLock("async_all_api_permission_v4_redis_lock_key"))
     def sync_all_api_permission(self):
         self.sync_all_permission()
 
@@ -248,6 +263,50 @@ class MyVerify:
         client.put(f'{self.token_block_prefix}block', json.dumps(block_dict), lease=ttl_id)
 
 
+def check_user_list_md5():
+    user_list_key = "check_user_list_md5"
+    redis_conn = cache_conn()
+    # users_dict = dict()
+    with DBContext('r', None, True, **settings) as session:
+        users = session.query(Users).all()
+        users_dict = {user.id: {'email': user.email, 'user_status': user.status} for user in users}
+
+        user_list_md5 = gen_md5(json.dumps(users_dict))
+        old_user_list_md5 = redis_conn.get(user_list_key)
+        if old_user_list_md5:
+            old_user_list_md5 = convert(old_user_list_md5)
+        if old_user_list_md5 == user_list_md5:
+            return False
+        else:
+            redis_conn.set(user_list_key, user_list_md5, ex=8640)  # todo 259200
+            return True
+
+
+def check_user_func_list_md5():
+    user_role_key = "check_user_role_key_md5"
+    func_role_key = "check_func_role_key_md5"
+    redis_conn = cache_conn()
+    with DBContext('r', None, True, **settings) as session:
+        users_role = session.query(UserRoles).all()
+        funcs_role = session.query(RoleFunctions).all()
+
+        users_dict = {u.id: {'role': u.role_id, 'user': u.user_id} for u in users_role}
+        funcs_dict = {f.id: {'role': f.role_id, 'func': f.func_id} for f in funcs_role}
+
+        combined_dict = {'users': users_dict, 'funcs': funcs_dict}
+        combined_md5 = gen_md5(json.dumps(combined_dict))
+
+        old_combined_md5 = redis_conn.get(user_role_key)
+        if old_combined_md5:
+            old_combined_md5 = convert(old_combined_md5)
+
+        if old_combined_md5 == combined_md5:
+            return False
+        else:
+            redis_conn.set(func_role_key, combined_md5, ex=8640)  # 259200 秒 = 3 天
+            return True
+
+
 def get_all_user():
     def md5hex(sign):
         md5 = hashlib.md5()  # 创建md5加密对象
@@ -267,7 +326,7 @@ def get_all_user():
     url = uc_conf['endpoint'] + "/api/all-users-4-outer"
     response = requests.get(url=url, params=params)
     res = response.json()
-    logging.info(res.get('message'))
+    # logging.info(res.get('message'))
     return res.get('data')
 
 

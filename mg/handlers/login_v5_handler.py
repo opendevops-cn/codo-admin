@@ -36,6 +36,7 @@ class LoginHandler(RequestHandler, ABC):
 
         if login_type == 'ldap':
             return await ldap_verify(username, password)
+
         if not login_type or login_type == 'ucenter':
             if not username or not password:
                 return dict(code=-1, msg='账号密码不能为空')
