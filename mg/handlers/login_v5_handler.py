@@ -37,17 +37,16 @@ class LoginHandler(RequestHandler, ABC):
         if login_type == 'ldap':
             return await ldap_verify(username, password)
 
-        if not login_type or login_type == 'ucenter':
-            if not username or not password:
-                return dict(code=-1, msg='账号密码不能为空')
+        # if not login_type or login_type == 'ucenter':
+        if not username or not password:
+            return dict(code=-1, msg='账号密码不能为空')
 
-            uc_conf = self.settings.get('uc_conf')
-            login_dict = dict(username=username, password=password, uc_conf=uc_conf)
-            user_info = await uc_verify(**login_dict)
-            if not user_info:
-                login_type = None
-            else:
-                return user_info
+        uc_conf = self.settings.get('uc_conf')
+        login_dict = dict(username=username, password=password, uc_conf=uc_conf)
+        user_info = await uc_verify(**login_dict)
+        if user_info:
+            return user_info
+        login_type = None
 
         if not login_type or login_type == 'base':
             if not username or not password:
@@ -61,7 +60,6 @@ class LoginHandler(RequestHandler, ABC):
         dynamic = data.get('dynamic')
         c_url = data.get('c_url', '/')
         login_type = data.get('login_type')
-
         user_info = await self.authenticate(username, password, login_type, data)
         if not user_info:
             return self.write(dict(code=-4, msg='账号异常'))

@@ -29,7 +29,6 @@ class FeiShuAuth:
 
         access_token = self.get_access_token()
         res = self.get_feishu_user(access_token)
-
         if not res or 'user_id' not in res: return None
         with DBContext('r') as session:
             user_info = session.query(Users).filter(Users.fs_id == res.get('user_id'),

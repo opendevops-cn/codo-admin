@@ -83,7 +83,11 @@ async def feishu_verify(**kwargs) -> Optional[Users]:
 
 
 async def uc_verify(**kwargs) -> Optional[Users]:
-    return OtherAuthV3(**kwargs)()
+    try:
+        return OtherAuthV3(**kwargs)()
+    except Exception as err:
+        logger.error(err)
+        return None
 
 
 def update_login_ip(user_id: str, login_ip_list: str):
