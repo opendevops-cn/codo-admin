@@ -96,7 +96,7 @@ class LoginHandler(RequestHandler, ABC):
             # 暂用逻辑
             try:
                 c_domain = get_domain_from_url(c_url)
-                self.set_cookie("auth_key", auth_key, domain=c_domain, expires_days=1)
+                self.set_cookie("auth_key", auth_key, domain=c_domain, httponly=True, expires_days=1)
                 self.set_cookie("is_login", 'yes', domain=c_domain, expires_days=1)
             except Exception as err:
                 logging.error(f"设置主域cookie失败 {err}")
