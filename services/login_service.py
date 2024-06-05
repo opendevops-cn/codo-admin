@@ -13,6 +13,7 @@ import pyotp
 from typing import *
 from shortuuid import uuid
 from loguru import logger
+from urllib.parse import urlparse
 from websdk2.jwt_token import AuthToken, gen_md5
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.consts import const
@@ -135,3 +136,11 @@ def get_user_info_for_id(user_id: int) -> Optional[Users]:
         user_info: Optional[Users] = session.query(Users).filter(Users.id == user_id,
                                                                  Users.status == "0").first()
     return user_info
+
+
+def get_domain_from_url(url):
+    parsed_url = urlparse(url)
+    # 提取 netloc 并去除端口号
+    u_domain = parsed_url.netloc.split(':')[0]
+    c_domain = f".{u_domain.split('.')[1]}.{u_domain.split('.')[2]}"
+    return c_domain

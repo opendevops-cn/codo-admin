@@ -7,6 +7,8 @@ role   : 用户登录
 """
 
 import json
+import logging
+
 import pyotp
 import base64
 from abc import ABC
@@ -15,7 +17,7 @@ from websdk2.jwt_token import AuthToken
 from libs.base_handler import BaseHandler
 from services.sys_service import get_sys_conf_dict_for_me
 from services.login_service import update_login_ip, base_verify, ldap_verify, feishu_verify, uc_verify, \
-    generate_token, get_user_info_for_id
+    generate_token, get_user_info_for_id, get_domain_from_url
 
 
 class LoginHandler(RequestHandler, ABC):
@@ -89,6 +91,15 @@ class LoginHandler(RequestHandler, ABC):
         self.set_cookie("is_login", 'yes', expires_days=1)
         if mfa_key:
             self.set_cookie("mfa_key", mfa_key, expires_days=1, httponly=True)
+
+        if c_url:
+            # 暂用逻辑
+            try:
+                c_domain = get_domain_from_url(c_url)
+                self.set_cookie("auth_key", auth_key, domain=c_domain, expires_days=1)
+                self.set_cookie("is_login", 'yes', domain=c_domain, expires_days=1)
+            except Exception as err:
+                logging.error(f"设置主域cookie失败 {err}")
 
         real_login_dict = dict(code=0, username=user_info.username, nickname=user_info.nickname, auth_key=auth_key,
                                avatar=user_info.avatar, c_url=c_url, msg='登录成功')
