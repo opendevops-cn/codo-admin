@@ -196,18 +196,6 @@ class LoginHandler(RequestHandler, ABC):
         self.finish(real_login_dict)
 
 
-class LogoutHandler(RequestHandler, ABC):
-    def get(self):
-        self.clear_all_cookies()
-        self.set_status(401)
-        self.finish()
-        # raise HTTPError(401, 'logout')
-
-    def post(self):
-        self.clear_all_cookies()
-        self.set_status(401)
-        self.finish()
-
 
 class AuthorizationHandler(BaseHandler, ABC):
     async def get(self, *args, **kwargs):
@@ -336,7 +324,6 @@ class LoginFSHandler(RequestHandler, ABC):
 
 login_v4_urls = [
     (r"/v4/na/login/", LoginHandler),
-    (r"/v4/na/logout/", LogoutHandler),
     (r"/v4/na/authorization/", AuthorizationHandler),
     (r"/v4/na/m/(.+)", LoginMHandler),
     (r"/v4/na/login/feishu/", LoginFSHandler),

@@ -134,8 +134,35 @@ class VerifyMFAHandler(BaseHandler, ABC):
         return self.write(dict(code=0, msg='当前用户未开启二次认证'))
 
 
+class LogoutHandler(RequestHandler, ABC):
+
+    def get_root_domain(self):
+        # 获取当前请求的主机名（不包括子域名前缀）
+        host_name = self.request.host_name
+        # 提取根域名部分
+        root_domain = ".".join(host_name.split(".")[-2:])
+        return root_domain
+
+    def get(self):
+        try:
+            self.clear_all_cookies()
+            root_domain = self.get_root_domain()
+            self.clear_cookie("auth_key", domain=root_domain)
+            self.clear_cookie("is_login", domain=root_domain)
+        except Exception as err:
+            pass
+        self.set_status(401)
+        self.finish()
+
+    def post(self):
+        self.clear_all_cookies()
+        self.set_status(401)
+        self.finish()
+
+
 login_v5_urls = [
     (r"/v4/na/login/05/", LoginHandler),
+    (r"/v4/na/logout/", LogoutHandler),
     (r"/v4/verify/mfa/", VerifyMFAHandler)
 ]
 
