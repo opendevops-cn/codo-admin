@@ -139,6 +139,8 @@ class LogoutHandler(RequestHandler, ABC):
     def get_root_domain(self):
         # 获取当前请求的完整主机名（包括端口）
         host = self.request.host.split(':')[0]  # 去掉端口部分
+        logging.error(self.request.headers.host)
+        logging.error(self.request.headers.Referer)
         # 提取根域名部分，假设域名结构为subdomain.domain.tld
         parts = host.split('.')
         if len(parts) > 2:
