@@ -137,8 +137,14 @@ class VerifyMFAHandler(BaseHandler, ABC):
 class LogoutHandler(RequestHandler, ABC):
 
     def get_root_domain(self):
-        host_name = self.request.host_name
-        root_domain = ".".join(host_name.split(".")[-2:])
+        # 获取当前请求的完整主机名（包括端口）
+        host = self.request.host.split(':')[0]  # 去掉端口部分
+        # 提取根域名部分，假设域名结构为subdomain.domain.tld
+        parts = host.split('.')
+        if len(parts) > 2:
+            root_domain = ".".join(parts[-2:])
+        else:
+            root_domain = host  # 处理类似于localhost的情况
         return root_domain
 
     def get(self):
