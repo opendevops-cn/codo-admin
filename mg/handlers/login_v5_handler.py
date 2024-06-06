@@ -137,9 +137,7 @@ class VerifyMFAHandler(BaseHandler, ABC):
 class LogoutHandler(RequestHandler, ABC):
 
     def get_root_domain(self):
-        # 获取当前请求的主机名（不包括子域名前缀）
         host_name = self.request.host_name
-        # 提取根域名部分
         root_domain = ".".join(host_name.split(".")[-2:])
         return root_domain
 
@@ -147,6 +145,7 @@ class LogoutHandler(RequestHandler, ABC):
         try:
             self.clear_all_cookies()
             root_domain = self.get_root_domain()
+            logging.error(root_domain)
             self.clear_cookie("auth_key", domain=root_domain)
             self.clear_cookie("is_login", domain=root_domain)
         except Exception as err:
