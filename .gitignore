@@ -96,8 +96,8 @@ ENV/
  
 # mkdocs documentation
 /site
-.github/
-.github/*
+#.github/
+#.github/*
  
 # mypy
 .mypy_cache/
