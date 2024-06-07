@@ -138,9 +138,9 @@ class LogoutHandler(RequestHandler, ABC):
 
     def get(self):
         try:
-            root_domain = self.request.headers.get('_codo_root_domain')
+            root_domain = self.request.headers.get('Codo-root-domain')
             print(self.request.headers)
-            logging.error(f"_codo_root_domain {root_domain}")
+            logging.error(f"Codo-root-domain {root_domain}")
             self.clear_all_cookies()
             self.clear_cookie("auth_key", domain=root_domain)
             self.clear_cookie("is_login", domain=root_domain)
