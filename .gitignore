@@ -96,11 +96,12 @@ ENV/
  
 # mkdocs documentation
 /site
-#.github/
-#.github/*
- 
 # mypy
 .mypy_cache/
  
 .idea
 /test/
+/.github/
+.github/
+.github/*
+
