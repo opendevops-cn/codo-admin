@@ -96,7 +96,7 @@ class LoginHandler(RequestHandler, ABC):
             # 暂用逻辑
             try:
                 c_domain = get_domain_from_url(c_url)
-                self.set_cookie("auth_key", auth_key, domain=c_domain, httponly=True, expires_days=1)
+                self.set_cookie("auth_key", auth_key, domain=c_domain, expires_days=1)
                 self.set_cookie("is_login", 'yes', domain=c_domain, expires_days=1)
             except Exception as err:
                 logging.error(f"设置主域cookie失败 {err}")
@@ -139,7 +139,6 @@ class LogoutHandler(RequestHandler, ABC):
     def get(self):
         try:
             root_domain = self.request.headers.get('Codo-root-domain')
-            logging.error(f"Codo-root-domain {root_domain} -- {self.request.headers.get('codo-root-domain')}")
             self.clear_all_cookies()
             self.clear_cookie("auth_key", domain=root_domain)
             self.clear_cookie("is_login", domain=root_domain)
@@ -151,7 +150,6 @@ class LogoutHandler(RequestHandler, ABC):
     def post(self):
         try:
             root_domain = self.request.headers.get('Codo-root-domain')
-            logging.error(f"Codo-root-domain {root_domain} -- {self.request.headers.get('codo-root-domain')}")
             self.clear_all_cookies()
             self.clear_cookie("auth_key", domain=root_domain)
             self.clear_cookie("is_login", domain=root_domain)
