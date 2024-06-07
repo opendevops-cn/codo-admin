@@ -149,7 +149,14 @@ class LogoutHandler(RequestHandler, ABC):
         self.finish()
 
     def post(self):
-        self.clear_all_cookies()
+        try:
+            root_domain = self.request.headers.get('Codo-root-domain')
+            logging.error(f"Codo-root-domain {root_domain} -- {self.request.headers.get('codo-root-domain')}")
+            self.clear_all_cookies()
+            self.clear_cookie("auth_key", domain=root_domain)
+            self.clear_cookie("is_login", domain=root_domain)
+        except Exception as err:
+            pass
         self.set_status(401)
         self.finish()
 
