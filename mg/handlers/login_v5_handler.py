@@ -94,12 +94,19 @@ class LoginHandler(RequestHandler, ABC):
 
         if c_url:
             # 暂用逻辑
+            # try:
+            #     c_domain = get_domain_from_url(c_url)
+            #     self.set_cookie("auth_key", auth_key, domain=c_domain, expires_days=1)
+            #     self.set_cookie("is_login", 'yes', domain=c_domain, expires_days=1)
+            # except Exception as err:
+            #     logging.error(f"设置主域cookie失败 {err}")
             try:
-                c_domain = get_domain_from_url(c_url)
-                self.set_cookie("auth_key", auth_key, domain=c_domain, expires_days=1)
-                self.set_cookie("is_login", 'yes', domain=c_domain, expires_days=1)
+                root_domain = self.request.headers.get('Codo-root-domain')
+                self.clear_all_cookies()
+                self.set_cookie("auth_key", auth_key, domain=root_domain, expires_days=1)
+                self.set_cookie("is_login", 'yes', domain=root_domain, expires_days=1)
             except Exception as err:
-                logging.error(f"设置主域cookie失败 {err}")
+                pass
 
         real_login_dict = dict(code=0, username=user_info.username, nickname=user_info.nickname, auth_key=auth_key,
                                avatar=user_info.avatar, c_url=c_url, msg='登录成功')
