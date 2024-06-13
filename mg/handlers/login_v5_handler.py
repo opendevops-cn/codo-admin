@@ -102,7 +102,6 @@ class LoginHandler(RequestHandler, ABC):
             #     logging.error(f"设置主域cookie失败 {err}")
             try:
                 root_domain = self.request.headers.get('Codo-root-domain')
-                self.clear_all_cookies()
                 self.set_cookie("auth_key", auth_key, domain=root_domain, expires_days=1)
                 self.set_cookie("is_login", 'yes', domain=root_domain, expires_days=1)
             except Exception as err:
