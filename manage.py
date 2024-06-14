@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import sys
 import getpass
 from datetime import datetime
@@ -7,8 +10,11 @@ import argparse
 
 from sqlalchemy import create_engine, text
 from websdk2.consts import const
-
+from websdk2.jwt_token import AuthToken
 from settings import settings as app_settings
+from websdk2.configs import configs
+
+if configs.can_import: configs.import_dict(**app_settings)
 
 default_configs = app_settings[const.DB_CONFIG_ITEM][const.DEFAULT_DB_KEY]
 
@@ -112,6 +118,24 @@ class CreateSuperUser(BaseCommand):
                 print(f"Create SuperUser Success: {username}")
 
 
+class AuthKeyInit(BaseCommand):
+    """
+    Token初始化
+    """
+
+    def handle(self):
+        auth_token = AuthToken()
+        token = auth_token.encode_auth_token_v2(
+            exp_days=1825,  # 五年
+            user_id=99999,  # You should replace this with the actual user_id
+            username="codo",
+            nickname="系统用户",
+            email="codo@opendevops.cn",
+            is_superuser=True
+        )
+        print(token)
+
+
 def execute_from_command_line(argv):
     """解析命令行参数并执行相应的命令"""
     if len(argv) < 2:
@@ -131,6 +155,10 @@ def execute_from_command_line(argv):
     # 添加子命令 'db_init'
     goodbye_parser = subparsers.add_parser('db_init', help='used to db init.')
     goodbye_parser.set_defaults(func=DBInit.handle)
+
+    # 添加子命令 'token_init'
+    key_parser = subparsers.add_parser('token_init', help='used to auth key init.')
+    key_parser.set_defaults(func=AuthKeyInit.handle)
 
     # 解析命令行参数
     args = parser.parse_args()
