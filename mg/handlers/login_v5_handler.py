@@ -93,23 +93,17 @@ class LoginHandler(RequestHandler, ABC):
             self.set_cookie("mfa_key", mfa_key, expires_days=1, httponly=True)
 
         if c_url:
-            # 暂用逻辑
-            # try:
-            #     c_domain = get_domain_from_url(c_url)
-            #     self.set_cookie("auth_key", auth_key, domain=c_domain, expires_days=1)
-            #     self.set_cookie("is_login", 'yes', domain=c_domain, expires_days=1)
-            # except Exception as err:
-            #     logging.error(f"设置主域cookie失败 {err}")
             try:
                 root_domain = self.request.headers.get('Codo-root-domain')
                 self.set_cookie("auth_key", auth_key, domain=root_domain, expires_days=1)
                 self.set_cookie("is_login", 'yes', domain=root_domain, expires_days=1)
+                logging.info(f"设置主域Cookie {root_domain}")
             except Exception as err:
-                pass
+                logging.error(f"设置主域cookie失败 {err}")
 
         real_login_dict = dict(code=0, username=user_info.username, nickname=user_info.nickname, auth_key=auth_key,
                                avatar=user_info.avatar, c_url=c_url, msg='登录成功')
-        self.write(real_login_dict)
+        return self.write(real_login_dict)
 
 
 class VerifyMFAHandler(BaseHandler, ABC):
