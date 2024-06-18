@@ -143,7 +143,7 @@ class LogoutHandler(RequestHandler, ABC):
             self.clear_cookie("auth_key", domain=root_domain)
             self.clear_cookie("is_login", domain=root_domain)
         except Exception as err:
-            pass
+            logging.error(err)
         self.set_status(401)
         self.finish()
 
