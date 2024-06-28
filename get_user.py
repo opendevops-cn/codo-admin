@@ -13,6 +13,7 @@ import logging
 import requests
 from models.authority import Users
 from settings import settings
+from sqlalchemy import and_, or_
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.model_utils import insert_or_update
 
@@ -51,8 +52,10 @@ def sync_user_from_ucenter():
     def index():
         logging.info(f'async_all_user_redis_lock_key {datetime.datetime.now()}')
         with DBContext('w', None, True, **settings) as session:
+            user_id_list = []
             for user in get_all_user():
                 user_id = str(user.get('uid'))
+                user_id_list.append(user_id)
                 username = user.get('english_name')
                 if not user.get('position'):
                     try:
@@ -73,7 +76,10 @@ def sync_user_from_ucenter():
                                                  source="ucenter", tel=user.get('mobile'), status='0',
                                                  avatar=user.get('avatar'), username=user.get('english_name')))
                 except Exception as err:
-                    logging.info(f'\n async_all_user_redis_lock_key Exception {err}')
+                    logging.info(f'async_all_user_redis_lock_key Exception {err}')
+
+            session.query(Users).filter(Users.source == "ucenter", Users.source_account_id.notin_(user_id_list)).update(
+                {"status": "20"}, synchronize_session=False)
         logging.info(f'async_all_user_redis_lock_key end ')
 
     index()

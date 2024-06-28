@@ -8,7 +8,6 @@ role   : 用户登录
 
 import json
 import logging
-
 import pyotp
 import base64
 from abc import ABC
@@ -17,7 +16,7 @@ from websdk2.jwt_token import AuthToken
 from libs.base_handler import BaseHandler
 from services.sys_service import get_sys_conf_dict_for_me
 from services.login_service import update_login_ip, base_verify, ldap_verify, feishu_verify, uc_verify, \
-    generate_token, get_user_info_for_id, get_domain_from_url
+    generate_token, get_user_info_for_id
 
 
 class LoginHandler(RequestHandler, ABC):
@@ -27,8 +26,12 @@ class LoginHandler(RequestHandler, ABC):
 
     async def authenticate(self, username, password, login_type, data):
         if password:
-            password = base64.b64decode(password).decode("utf-8")
-            password = base64.b64decode(password).decode("utf-8")
+            try:
+                password = base64.b64decode(password).decode("utf-8")
+                password = base64.b64decode(password).decode("utf-8")
+            except Exception as err:
+                logging.error(err)
+                return dict(code=-1, msg='账号密码错误')
 
         if login_type == 'feishu':
             fs_conf = get_sys_conf_dict_for_me(**dict(category='feishu'))
@@ -64,13 +67,15 @@ class LoginHandler(RequestHandler, ABC):
         login_type = data.get('login_type')
         user_info = await self.authenticate(username, password, login_type, data)
         if not user_info:
-            return self.write(dict(code=-4, msg='账号异常'))
+            if login_type == 'feishu':
+                return self.write(dict(code=-3, msg='账号异常，请联系管理员'))
+            return self.write(dict(code=-4, msg='用户名密码错误'))
 
         if isinstance(user_info, dict) and "code" in user_info:
             return self.write(user_info)
 
         if user_info.status != '0':
-            return self.write(dict(code=-4, msg='账号被禁用'))
+            return self.write(dict(code=-5, msg='账号被禁用'))
 
         user_id = str(user_info.id)
         generate_token_dict = await generate_token(user_info, dynamic)
@@ -101,8 +106,14 @@ class LoginHandler(RequestHandler, ABC):
             except Exception as err:
                 logging.error(f"设置主域cookie失败 {err}")
 
-        real_login_dict = dict(code=0, username=user_info.username, nickname=user_info.nickname, auth_key=auth_key,
-                               avatar=user_info.avatar, c_url=c_url, msg='登录成功')
+        real_login_dict = dict(code=0, msg='登录成功',
+                               username=user_info.username,
+                               nickname=user_info.nickname,
+                               auth_key=auth_key,
+                               avatar=user_info.avatar,
+                               c_url=c_url,
+                               data=dict(username=user_info.username, nickname=user_info.nickname, auth_key=auth_key,
+                                         avatar=user_info.avatar, c_url=c_url))
         return self.write(real_login_dict)
 
 
@@ -154,7 +165,7 @@ class LogoutHandler(RequestHandler, ABC):
             self.clear_cookie("auth_key", domain=root_domain)
             self.clear_cookie("is_login", domain=root_domain)
         except Exception as err:
-            pass
+            logging.error(err)
         self.set_status(401)
         self.finish()
 

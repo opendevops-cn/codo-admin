@@ -331,14 +331,14 @@ def get_all_user():
 
 
 def sync_user_from_uc():
-    # from models.authority import Users
-
     @deco1(RedisLock("async_all_user_redis_lock_key"))
     def index():
         logging.info(f'开始同步用户中心数据 {datetime.datetime.now()}')
         with DBContext('w', None, True, **settings) as session:
+            user_id_list = []
             for user in get_all_user():
                 user_id = str(user.get('uid'))
+                user_id_list.append(user_id)
                 username = user.get('english_name')
                 if not user.get('position'):
                     try:
@@ -360,6 +360,9 @@ def sync_user_from_uc():
                                                  avatar=user.get('avatar'), username=user.get('english_name')))
                 except Exception as err:
                     logging.error(f'同步用户中心数据 出错 {err}')
+
+            session.query(Users).filter(Users.source == "ucenter", Users.source_account_id.notin_(user_id_list)).update(
+                {"status": "20"}, synchronize_session=False)
         logging.info('开始同步用户中心数据 结束')
 
     index()
