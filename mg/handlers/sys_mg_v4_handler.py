@@ -7,23 +7,25 @@ Date    : 2018/10/29
 Desc    : 应用相关逻辑
 """
 
-import json
-import shortuuid
 import base64
+import json
 from abc import ABC
+from concurrent.futures import ThreadPoolExecutor
+
+import shortuuid
 from sqlalchemy import exc
-from tornado.web import RequestHandler
 from tornado import gen
 from tornado.concurrent import run_on_executor
-from concurrent.futures import ThreadPoolExecutor
-from libs.base_handler import BaseHandler
-from websdk2.db_context import DBContext
+from tornado.web import RequestHandler
 from websdk2.base_handler import LivenessProbe
+from websdk2.consts import const
+from websdk2.db_context import DBContext
 from websdk2.jwt_token import gen_md5
-from websdk2.tools import check_password
 from websdk2.ldap import LdapApi
 from websdk2.model_utils import insert_or_update
-from websdk2.consts import const
+from websdk2.tools import check_password
+
+from libs.base_handler import BaseHandler
 from models.authority import Users, Menus, Functions, Components, Roles
 from services.audit_service import get_opt_log_list_v4
 from services.sys_service import settings_add, get_sys_conf_dict, get_sys_open_conf_dict, init_email
@@ -208,12 +210,12 @@ class AppSettingsHandler(BaseHandler, ABC):
         return self.write(res)
 
 
-class OpenConfHandler(BaseHandler, ABC):
+class OpenConfHandler(RequestHandler, ABC):
 
     def get(self):
         # 通用数据
-        res = get_sys_open_conf_dict(**self.params)
-        return self.write(res)
+        res = get_sys_open_conf_dict()
+        self.write(res)
 
 
 class CheckSettingsHandler(BaseHandler, ABC):
@@ -255,7 +257,7 @@ class CheckSettingsHandler(BaseHandler, ABC):
 
 sys_mg_v4_urls = [
     (r"/v4/app/opt_log/", LogV4Handler, {"handle_name": "PAAS管理-操作日志V4"}),
-    (r"/v4/na/conf/", OpenConfHandler, {"handle_name": "PAAS管理-开放配置"}),
+    (r"/v4/na/conf/", OpenConfHandler),  # PAAS管理-开放配置v4
     (r'/v4/sysconfig/settings/', AppSettingsHandler, {"handle_name": "PAAS管理-系统设置", "method": ["ALL"]}),
     (r'/v4/sysconfig/check/', CheckSettingsHandler, {"handle_name": "PAAS管理-系统设置检查", "method": ["ALL"]}),
     (r'/v4/authority/register/', AuthorityRegister, {"handle_name": "PAAS管理-权限注册", "method": ["ALL"]}),

@@ -6,17 +6,19 @@ date   : 2017年11月21日
 role   : 用户登录
 """
 
+import base64
 import json
 import logging
-import pyotp
-import base64
 from abc import ABC
+
+import pyotp
 from tornado.web import RequestHandler
 from websdk2.jwt_token import AuthToken
+
 from libs.base_handler import BaseHandler
-from services.sys_service import get_sys_conf_dict_for_me
 from services.login_service import update_login_ip, base_verify, ldap_verify, feishu_verify, uc_verify, \
     generate_token, get_user_info_for_id
+from services.sys_service import get_sys_conf_dict_for_me
 
 
 class LoginHandler(RequestHandler, ABC):
