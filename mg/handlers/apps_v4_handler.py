@@ -9,8 +9,10 @@ Desc    : 应用管理
 
 import json
 from abc import ABC
-from libs.base_handler import BaseHandler
+
 from websdk2.db_context import DBContextV2 as DBContext
+
+from libs.base_handler import BaseHandler
 from models.authority import RoleApps
 from services.app_service import get_apps_list_for_main, get_apps_list_for_api, opt_obj, get_apps_list_for_role
 
@@ -71,12 +73,14 @@ class AppsV4Handler(BaseHandler, ABC):
 
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
+        data.setdefault("classify", "SaaS")
         res = opt_obj.handle_add(data)
 
         self.write(res)
 
     def put(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
+        data.setdefault("classify", "SaaS")
         res = opt_obj.handle_update(data)
 
         self.write(res)

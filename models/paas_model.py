@@ -5,16 +5,14 @@ author : shenshuo
 date   : 2023年06月05日
 desc   : 平台管理
 """
-# import json
-# import base64
-from sqlalchemy import Column, DateTime
 from datetime import datetime
-# from sqlalchemy.orm import relationship, backref
-# from sqlalchemy import TypeDecorator
-from sqlalchemy import Column, String, Integer, JSON, ForeignKey, UniqueConstraint, Text
+
+from sqlalchemy import Column, String, Integer, JSON, UniqueConstraint, Text
+from sqlalchemy import DateTime
 from sqlalchemy.dialects.mysql import LONGTEXT, MEDIUMTEXT
 from sqlalchemy.ext.declarative import declarative_base
 from websdk2.utils.cc_crypto import AESCryptoV3
+
 from models import TimeBaseModel
 
 Base = declarative_base()
@@ -32,6 +30,7 @@ class AppsModel(TimeBaseModel, Base):
     # path = Column('path', String(255), default='')  # 文件加载地址
     img = Column('img', String(255), default='')  # 图片地址
     icon = Column('icon', String(255), default='')  # 图标
+    classify = Column('classify', String(50), default='SaaS', index=True)  # 分类
     description = Column('description', String(250), default='')  # 描述、备注
 
 
