@@ -9,8 +9,9 @@ Desc    : 用户收藏
 
 from sqlalchemy.exc import IntegrityError
 from websdk2.db_context import DBContextV2 as DBContext
-from libs.feature_pydantic_utils import sqlalchemy_to_pydantic, ValidationError, PydanticDel
 from websdk2.sqlalchemy_pagination import paginate
+
+from libs.feature_pydantic_utils import sqlalchemy_to_pydantic, ValidationError, PydanticDel
 from models.paas_model import FavoritesModel
 
 PydanticFavorites = sqlalchemy_to_pydantic(FavoritesModel, exclude=['id'])  # 排除自增ID

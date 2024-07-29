@@ -6,24 +6,27 @@ date   : 2017年11月15日
 role   : 权限同步和鉴定
 """
 
-import time
+import datetime
 import hashlib
 import json
-import datetime
 import logging
-import requests
+import time
 from concurrent.futures import ThreadPoolExecutor
-from settings import settings
-from websdk2.consts import const
+
+import requests
 from websdk2.cache_context import cache_conn
-from websdk2.db_context import DBContextV2 as DBContext
-from websdk2.tools import RedisLock, now_timestamp, convert
-from websdk2.jwt_token import gen_md5
 from websdk2.configs import configs
+from websdk2.consts import const
+from websdk2.db_context import DBContextV2 as DBContext
+from websdk2.jwt_token import gen_md5
 from websdk2.model_utils import insert_or_update
-from services.role_service import get_all_user_list_for_role
+from websdk2.tools import RedisLock, now_timestamp, convert
+
 from libs.etcd import Etcd3Client
 from models.authority import Users, Roles, UserRoles, RoleFunctions, Functions, UserToken
+from models.paas_model import BizModel
+from services.role_service import get_all_user_list_for_role
+from settings import settings
 
 if configs.can_import: configs.import_dict(**settings)
 
@@ -82,7 +85,8 @@ class MyVerify:
         self.etcd_dict = settings.get('etcds').get(const.DEFAULT_ETCD_KEY)
         self.etcd_prefix = settings.get('etcd_prefix', '/')
         self.crbac_prefix = f"{self.etcd_prefix}codorbac/"
-        self.token_block_prefix = f"{self.etcd_prefix}tokenblock/"
+        self.token_block_prefix = f"{self.etcd_prefix}token/block/"
+        self.biz_acl_prefix = f"{self.etcd_prefix}biz/acl/"
         self.is_superuser = is_superuser
         self.method_list = ["GET", "POST", "PATCH", "DELETE", "PUT", "ALL"]
         self.etcd_client = Etcd3Client(host=self.etcd_dict.get(const.DEFAULT_ETCD_HOST),
@@ -246,21 +250,37 @@ class MyVerify:
                 self.etcd_client.put(key, json.dumps(value), lease=ttl_id)
 
     ##################################################################
-    @deco(RedisLock("async_token_block_list_redis_lock_key"))
-    def token_block_list(self):
-        ttl_id = now_timestamp()
-        logging.info(f'同步令牌黑名单数据 {ttl_id}')
-        with DBContext('r') as session:
-            token_info = session.query(UserToken.token_md5).filter(UserToken.status != '0').all()
+    @deco(RedisLock("async_token_block_lock_key"))
+    def sync_token_block_to_gw(self):
+        try:
+            ttl_id = now_timestamp()
+            logging.info(f'同步令牌黑名单数据 {ttl_id}')
+            with DBContext('r') as session:
+                token_info = session.query(UserToken.token_md5).filter(UserToken.status != '0').all()
 
-        client = Etcd3Client(hosts=self.etcd_dict.get('DEFAULT_ETCD_HOST_PORT'))
-        client.ttl(ttl_id=ttl_id, ttl=86400)  # 一天
-        block_dict = {}
-        for token_md5 in token_info:
-            token_md5 = token_md5[0]
-            block_dict[token_md5] = 'y'
+            self.etcd_client.ttl(ttl_id=ttl_id, ttl=86400)  # 一天
+            block_dict = {token_md5[0]: 'y' for token_md5 in token_info}
 
-        client.put(f'{self.token_block_prefix}block', json.dumps(block_dict), lease=ttl_id)
+            self.etcd_client.put(self.token_block_prefix, json.dumps(block_dict), lease=ttl_id)
+        except Exception as err:
+            logging.error(f"推送令牌黑名单出错 {err}")
+
+    @deco(RedisLock("async_biz_list_to_gw_lock_key"))
+    def sync_biz_to_gw(self):
+        try:
+            ttl_id = now_timestamp()
+            logging.info(f'同步业务数据 {ttl_id}')
+            with DBContext('r') as session:
+                business_info = session.query(BizModel).all()
+
+            business_dict = {
+                info.biz_id: {user: "y" for user in info.users_info}
+                for info in business_info
+            }
+            self.etcd_client.ttl(ttl_id=ttl_id, ttl=720000)  # TTL set to 200 hours
+            self.etcd_client.put(self.biz_acl_prefix, json.dumps(business_dict), lease=ttl_id)
+        except Exception as err:
+            logging.error(f"推送业务信息出错 {err}")
 
 
 def check_user_list_md5():
@@ -431,7 +451,8 @@ def async_api_permission_v4():
     executor.submit(obj.sync_all_api_permission)
     executor.submit(sync_all_user_list_for_role)
     executor.submit(sync_user_to_gw)
-    # executor.submit(obj.token_block_list)
+    executor.submit(obj.sync_token_block_to_gw)
+    executor.submit(obj.sync_biz_to_gw)
 
 
 def async_user_center():
