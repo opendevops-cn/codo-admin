@@ -92,9 +92,9 @@ class RedisSubscriber:
             start_time = log_data_dict.get('start_time')
             start_time = int(start_time) / 1000
             times = datetime.datetime.fromtimestamp(start_time)
+            log_data_dict['start_time'] = times
         except Exception as err:
-            logging.error(f"datetime.datetime.fromtimestamp {start_time} {err}")
-        log_data_dict['start_time'] = times
+            logging.error(f"datetime.datetime.fromtimestamp  {err}")
         # logging.info(log_data_dict)
         return log_data_dict
 
