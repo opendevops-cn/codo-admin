@@ -9,13 +9,15 @@ Desc    : 解释一下吧
 """
 
 import json
+
 from sqlalchemy import or_
+from websdk2.cache_context import cache_conn
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.sqlalchemy_pagination import paginate
 from websdk2.tools import convert
-from websdk2.cache_context import cache_conn
-from models.paas_model import BizModel
+
 from libs.feature_model_utils import CommonOptView
+from models.paas_model import BizModel
 
 ROLE_USER_INFO_STR = "ROLE_USER_INFO_STR"
 opt_obj = CommonOptView(BizModel)
@@ -73,6 +75,8 @@ def add_init_default():
             BizModel(**dict(biz_cn_name='公共项目', biz_en_name='public', biz_id=str(501), life_cycle='已上线')))
         session.add(
             BizModel(**dict(biz_cn_name='默认项目', biz_en_name='default', biz_id=str(502), life_cycle='已上线')))
+        session.add(
+            BizModel(**dict(biz_cn_name='运维项目', biz_en_name='ops', biz_id=str(504), life_cycle='已上线')))
     return
 
 

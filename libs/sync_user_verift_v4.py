@@ -273,12 +273,12 @@ class MyVerify:
             with DBContext('r') as session:
                 business_info = session.query(BizModel).all()
 
-            business_dict = {
-                info.biz_id: {user: "y" for user in info.users_info}
-                for info in business_info
-            }
-            self.etcd_client.ttl(ttl_id=ttl_id, ttl=720000)  # TTL set to 200 hours
-            self.etcd_client.put(self.biz_acl_prefix, json.dumps(business_dict), lease=ttl_id)
+            for info in business_info:
+                acl_prefix = f"{self.biz_acl_prefix}{info.biz_id}"
+                users_info = {user: "y" for user in info.users_info} if isinstance(info.users_info,
+                                                                                   (list, dict)) else {}
+                self.etcd_client.ttl(ttl_id=ttl_id, ttl=720000)  # TTL set to 200 hours
+                self.etcd_client.put(acl_prefix, json.dumps(users_info), lease=ttl_id)
         except Exception as err:
             logging.error(f"推送业务信息出错 {err}")
 
