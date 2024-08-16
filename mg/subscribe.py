@@ -61,12 +61,16 @@ class RedisSubscriber:
         log_data_dict['uri'] = request_data.get('uri')[0:255]
         log_data_dict['method'] = request_data.get('method')
         try:
-            log_data_dict['rq_headers'] = str(request_data.get('headers'))
+            headers = request_data.get('headers', {})
+            # 处理 headers，隐藏 auth-key 的值
+            filtered_headers = {key: '******' if 'auth-key' in key.lower() else value for key, value in headers.items()}
+            # 将处理后的 headers 转换为字符串并保存
+            log_data_dict['rq_headers'] = str(filtered_headers)
         except Exception as err:
             log_data_dict['rq_headers'] = "{}"
-            logging.error(f"格式化header {err}")
+            logging.error(f"格式化 header 失败: {err}")
         # log_data_dict['rq_query'] = request_data.get('method')
-
+        log_data_dict['rq_headers'] = "{}"  # 隐藏headers
         request_data_data = request_data.get('data')
         try:
             if request_data_data:
@@ -99,7 +103,7 @@ class RedisSubscriber:
             if not self.redis_conn.exists(stream_name):
                 self.redis_conn.xadd(stream_name, {'test': 'true'})
             ret = self.redis_conn.xgroup_create(stream_name, group_name, id=0)
-            print(ret)
+            # print(ret)
         except Exception as err:
             logging.debug('create_consumer_group', err)
 
