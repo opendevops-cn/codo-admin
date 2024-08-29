@@ -5,17 +5,18 @@ author : shenshuo
 date   : 2017年11月15日
 role   : 权限同步和鉴定
 """
-import json
-import time
-import hashlib
 import datetime
+import hashlib
+import json
 import logging
+import time
+
 import requests
-from models.authority import Users
-from settings import settings
-from sqlalchemy import and_, or_
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.model_utils import insert_or_update
+
+from models.authority import Users
+from settings import settings
 
 try:
     requests.packages.urllib3.disable_warnings()
@@ -78,7 +79,8 @@ def sync_user_from_ucenter():
                 except Exception as err:
                     logging.info(f'async_all_user_redis_lock_key Exception {err}')
 
-            session.query(Users).filter(Users.source == "ucenter", Users.source_account_id.notin_(user_id_list)).update(
+            session.query(Users).filter(Users.source == "ucenter", Users.status != "20",
+                                        Users.source_account_id.notin_(user_id_list)).update(
                 {"status": "20"}, synchronize_session=False)
         logging.info(f'async_all_user_redis_lock_key end ')
 

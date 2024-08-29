@@ -381,7 +381,8 @@ def sync_user_from_uc():
                 except Exception as err:
                     logging.error(f'同步用户中心数据 出错 {err}')
 
-            session.query(Users).filter(Users.source == "ucenter", Users.source_account_id.notin_(user_id_list)).update(
+            session.query(Users).filter(Users.source == "ucenter", Users.status != "20",
+                                        Users.source_account_id.notin_(user_id_list)).update(
                 {"status": "20"}, synchronize_session=False)
         logging.info('开始同步用户中心数据 结束')
 
