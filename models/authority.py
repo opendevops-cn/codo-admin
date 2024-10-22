@@ -14,7 +14,7 @@ from models import TimeBaseModel
 Base = declarative_base()
 
 
-class Users(TimeBaseModel, Base):
+class Users(Base):
     __tablename__ = 'codo_a_users'
 
     # 用户表
@@ -38,6 +38,8 @@ class Users(TimeBaseModel, Base):
     fs_id = Column('fs_id', String(180), default='')  # 飞书ID
     ext_info = Column('ext_info', JSON(), default={}, comment='扩展字段存JSON')  # 扩展字段
     ##
+    create_time = Column(DateTime, nullable=False, default=datetime.now)  # 记录的创建时间
+    update_time = Column(DateTime, nullable=False, default=datetime.now, index=True)  # 更新时间
     last_ip = Column('last_ip', String(20), default='')
     last_login = Column('last_login', DateTime(), default=datetime.now, onupdate=datetime.now)
 

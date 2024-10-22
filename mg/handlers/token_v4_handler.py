@@ -41,8 +41,8 @@ class TokenHandler(BaseHandler, ABC):
         with DBContext('r') as session:
             user_info = session.query(Users).filter(Users.id == user_id).first()
 
-            if user_info.superuser == '0':
-                return self.write(dict(code=-4, msg='超级用户不能生成长期令牌'))
+            # if user_info.superuser == '0':
+            #     return self.write(dict(code=-4, msg='超级用户不能生成长期令牌'))
 
         # 生成token
         is_superuser = True if user_info.superuser == '0' else False
