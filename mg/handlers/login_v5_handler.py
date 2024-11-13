@@ -99,21 +99,21 @@ class LoginHandler(RequestHandler, ABC):
         if mfa_key:
             self.set_cookie("mfa_key", mfa_key, expires_days=1, httponly=True)
 
-        if c_url:
-            try:
-                root_domain = self.request.headers.get('Codo-root-domain')
-                self.set_cookie("auth_key", auth_key, domain=root_domain, expires_days=1)
-                self.set_cookie("is_login", 'yes', domain=root_domain, expires_days=1)
-                logging.info(f"设置主域Cookie {root_domain}")
-            except Exception as err:
-                logging.error(f"设置主域cookie失败 {err}")
-
+        # if c_url:
+        #     try:
+        #         root_domain = self.request.headers.get('Codo-root-domain')
+        #         self.set_cookie("auth_key", auth_key, domain=root_domain, expires_days=1)
+        #         self.set_cookie("is_login", 'yes', domain=root_domain, expires_days=1)
+        #         logging.info(f"设置主域Cookie {root_domain}")
+        #     except Exception as err:
+        #         logging.error(f"设置主域cookie失败 {err}")
+        # 
         real_login_dict = dict(code=0, msg='登录成功',
-                               username=user_info.username,
-                               nickname=user_info.nickname,
-                               auth_key=auth_key,
-                               avatar=user_info.avatar,
-                               c_url=c_url,
+                               # username=user_info.username,
+                               # nickname=user_info.nickname,
+                               # auth_key=auth_key,
+                               # avatar=user_info.avatar,
+                               # c_url=c_url,
                                data=dict(username=user_info.username, nickname=user_info.nickname, auth_key=auth_key,
                                          avatar=user_info.avatar, c_url=c_url))
         return self.write(real_login_dict)
