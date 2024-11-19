@@ -12,7 +12,7 @@ RUN yum install -y python3 python3-pip git && \
 
 # 升级 pip 并安装 codo_sdk
 RUN python3 -m pip install --upgrade pip && \
-    pip install -U git+https://github.com/ss1917/codo_sdk.git
+    pip install -U git+https://github.com/ss1917/ops_sdk.git
 
 # 设置环境变量
 ARG SERVICE_NAME
@@ -30,4 +30,4 @@ RUN pip install -r docs/requirements.txt &> /dev/null && \
 EXPOSE 8000
 CMD /data/run-py.sh ${SERVICE_NAME}
 
-### docker build --no-cache --build-arg SERVICE_NAME=admin-mg-api  . -t codo-admin-image
+### docker build --no-cache --build-arg SERVICE_NAME=mg  . -t codo-admin-image

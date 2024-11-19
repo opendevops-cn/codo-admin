@@ -107,13 +107,13 @@ class LoginHandler(RequestHandler, ABC):
         #         logging.info(f"设置主域Cookie {root_domain}")
         #     except Exception as err:
         #         logging.error(f"设置主域cookie失败 {err}")
-        # 
+        #TODO 清理外层数据
         real_login_dict = dict(code=0, msg='登录成功',
-                               # username=user_info.username,
-                               # nickname=user_info.nickname,
-                               # auth_key=auth_key,
-                               # avatar=user_info.avatar,
-                               # c_url=c_url,
+                               username=user_info.username,
+                               nickname=user_info.nickname,
+                               auth_key=auth_key,
+                               avatar=user_info.avatar,
+                               c_url=c_url,
                                data=dict(username=user_info.username, nickname=user_info.nickname, auth_key=auth_key,
                                          avatar=user_info.avatar, c_url=c_url))
         return self.write(real_login_dict)
