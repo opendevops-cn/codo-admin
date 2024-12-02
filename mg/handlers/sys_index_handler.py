@@ -72,8 +72,7 @@ index_step_urls = [
     (r"/v4/ops-step-service/", IndexStepHandler, {"handle_name": "PAAS-基础功能-首页步骤管理", "method": ["ALL"]}),
     (r"/v4/ops-index-service/", IndexServiceHandler, {"handle_name": "PAAS-基础功能-首页服务管理", "method": ["ALL"]}),
     (r"/v4/index-step/", IndexStep, {"handle_name": "PAAS-基础功能-首页步骤", "method": ["GET"]}),
-    (r"/v4/index-service/", IndexService, {"handle_name": "PAAS-基础功能-首页服务", "method": ["GET"]}),
-
+    (r"/v4/index-service/", IndexService, {"handle_name": "PAAS-基础功能-首页服务", "method": ["GET"]})
 ]
 
 if __name__ == "__main__":

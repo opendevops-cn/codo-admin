@@ -174,8 +174,10 @@ class MyVerify:
         ttl_id = now_timestamp()
         logging.info(f'全量同步权限到ETCD 准备 {ttl_id}')
         api_data = self.api_permissions()
-        self.etcd_client.ttl(ttl_id=ttl_id, ttl=720000)
-
+        try:
+            self.etcd_client.ttl(ttl_id=ttl_id, ttl=720000)
+        except Exception as err:
+            logging.error(f"全量同步权限到ETCD ttl_id 出错 {err}")
         ###
         for k, v in api_data.items():
             func_id, func_name, app_code, uri, method = k.split('---')
@@ -192,7 +194,10 @@ class MyVerify:
                 "rules": v
             }
             key = f"{self.crbac_prefix}{func_id}{match_key}"
-            self.etcd_client.put(key, json.dumps(value), lease=ttl_id)
+            try:
+                self.etcd_client.put(key, json.dumps(value), lease=ttl_id)
+            except Exception as err:
+                logging.error(f"全量同步权限到ETCD 出错 {err}")
 
         logging.info(f'全量同步权限到ETCD 结束 {ttl_id}')
 
@@ -206,7 +211,10 @@ class MyVerify:
         logging.info(f'差异同步权限到ETCD 检查开始 {ttl_id}')
 
         api_data = self.api_permissions()
-        self.etcd_client.ttl(ttl_id=ttl_id, ttl=72000)
+        try:
+            self.etcd_client.ttl(ttl_id=ttl_id, ttl=720000)
+        except Exception as err:
+            logging.error(f"差异同步权限到ETCD ttl_id 出错 {err}")
         ###
         api_permission_new_dict = {}
         api_permission_dict_key = "api_permission_dict_key"
@@ -241,13 +249,16 @@ class MyVerify:
             }
             key = f"{self.crbac_prefix}{func_id}{match_key}"
             ########
-            if k_md5 in api_permission_old_dict:
-                if v_md5 != api_permission_old_dict.get(k_md5):
-                    # print(f'{k}   ####API关联关系改变，要更新一下')
+            try:
+                if k_md5 in api_permission_old_dict:
+                    if v_md5 != api_permission_old_dict.get(k_md5):
+                        # print(f'{k}   ####API关联关系改变，要更新一下')
+                        self.etcd_client.put(key, json.dumps(value), lease=ttl_id)
+                else:
+                    # print(f'{k}    ####新API  要更新一下')
                     self.etcd_client.put(key, json.dumps(value), lease=ttl_id)
-            else:
-                # print(f'{k}    ####新API  要更新一下')
-                self.etcd_client.put(key, json.dumps(value), lease=ttl_id)
+            except Exception as err:
+                logging.error(f"差异同步权限到ETCD 出错 {err}")
 
     ##################################################################
     @deco(RedisLock("async_token_block_lock_key"))
