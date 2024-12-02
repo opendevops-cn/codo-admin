@@ -149,3 +149,23 @@ class OperationRecords(TimeBaseModel, Base):
     start_time = Column('start_time', DateTime(), default=datetime.now)
     response_data = Column('response_data', LONGTEXT())
     response_status = Column('response_status', String(15))
+
+
+class IndexStepModel(TimeBaseModel, Base):
+    __tablename__ = 'codo_index_step'
+    id = Column('id', Integer, primary_key=True, autoincrement=True)
+    title = Column(String(255), nullable=False)  # 步骤标题
+    description = Column(Text, nullable=False)   # 步骤描述
+    cards = Column(JSON, nullable=True)          # 卡片列表，存储为 JSON
+    faqs = Column(JSON, nullable=True)           # FAQ 列表，存储为 JSON
+
+
+class IndexServiceModel(TimeBaseModel, Base):
+    __tablename__ = 'codo_index_service'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    category = Column(String(100), nullable=False, index=True)  # 一级分类
+    regions = Column(JSON, nullable=False)  # 存储地域或者业务
+    name = Column(String(100), nullable=False)  # 服务名称
+    description = Column(String(255), nullable=True)  # 服务描述
+    href = Column(String(500), nullable=True)  # 链接地址
