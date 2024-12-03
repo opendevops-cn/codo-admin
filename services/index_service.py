@@ -24,7 +24,7 @@ PydanticFavoritesUP = sqlalchemy_to_pydantic(IndexStepModel)
 def get_step_list() -> dict:
     with DBContext('r') as session:
         queryset = queryset_to_list(session.query(IndexStepModel).all())
-    return dict(code=0, msg="创建成功", data=queryset)
+    return dict(code=0, msg="查看成功", data=queryset)
 
 
 def add_step(data: dict):
@@ -111,7 +111,7 @@ def get_service_dict() -> dict:
                         }
                     })
 
-    return dict(code=0, data=formatted_result)
+    return dict(code=0, msg="查看成功", data=formatted_result)
 
 
 def _get_value(value: str = None):
