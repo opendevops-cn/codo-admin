@@ -4,12 +4,12 @@
 Version : 0.0.1
 Contact : 191715030@qq.com
 Author  : shenshuo
-Date    : 2020/12/10 15:14
-Desc    : 解释一下吧
+Date    : 2024/12/6 15:14
+Desc    : 业务数据
 """
 
 import json
-
+import logging
 from sqlalchemy import or_
 from websdk2.cache_context import cache_conn
 from websdk2.db_context import DBContextV2 as DBContext
@@ -21,9 +21,6 @@ from models.paas_model import BizModel
 
 ROLE_USER_INFO_STR = "ROLE_USER_INFO_STR"
 opt_obj = CommonOptView(BizModel)
-
-
-# opt_obj2 = CommonOptView(TenantModel)
 
 
 def _get_biz_value(value: str = None):
@@ -80,6 +77,7 @@ def add_init_default():
     return
 
 
+# TODO 待废弃
 def get_biz_list_v3(**params):
     params['page_size'] = 300  # 默认获取到全部数据
     is_superuser = params.get('is_superuser')
@@ -87,14 +85,46 @@ def get_biz_list_v3(**params):
 
     with DBContext('r') as session:
         queryset = session.query(BizModel).filter(BizModel.life_cycle != "停运").all()
-    view_biz_list = []
-    for b in queryset:
-        if is_superuser or b.biz_id in ['501', '502'] or str(user_id) in b.users_info:
-            view_biz_list.append(
-                dict(id=b.id, biz_id=b.biz_id, biz_cn_name=b.biz_cn_name, biz_en_name=b.biz_en_name))
+        view_biz_list = []
+        for b in queryset:
+            if is_superuser or b.biz_id in ['501', '502'] or str(user_id) in b.users_info:
+                view_biz_list.append(
+                    dict(id=b.id, biz_id=b.biz_id, biz_cn_name=b.biz_cn_name, biz_en_name=b.biz_en_name))
     # print(view_biz_list)
     return view_biz_list
 
+
+def get_biz_list_v4(**params):
+    try:
+        params['page_size'] = 300  # 默认获取到全部数据
+        is_superuser = params.get('is_superuser')
+        user_id = params.get('user_id')
+
+        # 使用数据库上下文进行查询，并且在查询时加入过滤条件，减少无用数据的传输
+        with DBContext('r') as session:
+            # 过滤掉停运的业务，确保只处理有效的业务
+            queryset = session.query(BizModel).filter(BizModel.life_cycle != "停运").all()
+
+            # 构建返回的业务列表
+            view_biz_list = [
+                dict(id=b.id, biz_id=b.biz_id, biz_cn_name=b.biz_cn_name, biz_en_name=b.biz_en_name)
+                for b in queryset
+                if can_view_biz(is_superuser, user_id, b)
+            ]
+
+        return view_biz_list
+
+    except Exception as err:
+        logging.error(f"Error occurred in get_biz_list_v4: {err}")
+        return {"code": -1, "msg": "服务器内部错误"}
+
+
+def can_view_biz(is_superuser, user_id, biz_model):
+    """
+    Helper function to determine if the user has permission to view the business.
+    """
+    # Check if the user is a superuser or has access to the business
+    return is_superuser or biz_model.biz_id in ['501', '502'] or str(user_id) in biz_model.users_info
 
 # def get_biz_tree(**params) -> list:
 #     # TODO 后续补充权限
@@ -189,3 +219,57 @@ def sync_biz_role_user(**params):
 
         session.bulk_update_mappings(BizModel, new_data)
         session.commit()
+
+
+def get_biz_map(view_biz, request_tenant_id) -> dict:
+    if request_tenant_id:
+        # 使用 next() 寻找第一个匹配的业务，如果没有找到则返回 None
+        the_biz = next((biz for biz in view_biz if biz.get('biz_id') == request_tenant_id), None)
+    else:
+        # 使用列表推导式过滤出不包含指定 biz_id 的业务列表
+        the_biz_list = [biz for biz in view_biz if biz.get('biz_id') not in ['501', '502']]
+        the_biz = the_biz_list[0] if the_biz_list else None
+
+    return dict(biz_cn_name=the_biz.get('biz_cn_name'), biz_id=the_biz.get('biz_id')) if the_biz else None
+
+
+def switch_business(set_secure_cookie, **params) -> dict:
+    biz_id = params.get('biz_id') or params.get('tenantid')
+    is_superuser = params.get('is_superuser')
+    user_id = params.get('user_id')
+
+    # 参数验证
+    if not biz_id:
+        return {"code": -1, "msg": "缺少必要参数"}
+
+    # 封装数据库查询和权限检查
+    try:
+        with DBContext('r') as session:
+            biz_info = session.query(BizModel).filter(BizModel.biz_id == str(biz_id)).first()
+
+            # 业务信息检查
+            if not biz_info:
+                return {"code": -2, "msg": "未知业务信息/资源组信息"}
+            # 权限检查，是否为超级用户或该用户是否在业务信息中
+            if is_superuser or user_id in biz_info.users_info:
+                return {"code": -3, "msg": "你没有访问的业务权限，请联系管理员"}
+
+    except Exception as db_err:
+        logging.error(f"数据库查询失败: {db_err}")
+        return {"code": -4, "msg": "数据库操作失败"}
+
+    # 设置cookie
+    try:
+        set_secure_cookie("biz_id", str(biz_info.biz_id))
+    except Exception as err:
+        logging.error(f"设置 cookie 失败: {err}")
+        return {"code": -5, "msg": "设置 cookie 失败"}
+
+    # 返回业务数据
+    biz_dict = {
+        "biz_id": str(biz_info.biz_id),
+        "biz_cn_name": str(biz_info.biz_cn_name),
+        "biz_en_name": biz_info.biz_en_name
+    }
+
+    return {"code": 0, "msg": "获取成功", "data": biz_dict}

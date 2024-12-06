@@ -4,16 +4,14 @@
 Version : 0.0.1
 Contact : 191715030@qq.com
 Author  : shenshuo
-Date    : 2020/12/10 15:14
+Date    : 2024/12/06 15:14
 Desc    : 解释一下吧
 """
 
-from sqlalchemy import or_, and_, func, desc, case
+from sqlalchemy import or_
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.sqlalchemy_pagination import paginate
-# from models.authority_model import Roles, UserRoles, Groups, UserGroups, GroupRoles
-from models.authority import Users, Roles, UserRoles
-# from websdk2.model_utils import CommonOptView
+from models.authority import Users, UserRoles
 from libs.feature_model_utils import CommonOptView
 
 opt_obj = CommonOptView(Users)
