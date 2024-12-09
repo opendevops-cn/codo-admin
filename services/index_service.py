@@ -12,13 +12,14 @@ from collections import defaultdict
 from sqlalchemy import or_
 from websdk2.sqlalchemy_pagination import paginate
 from websdk2.db_context import DBContextV2 as DBContext
-from websdk2.model_utils import queryset_to_list
-
+from websdk2.model_utils import queryset_to_list, CommonOptView
 from libs.feature_pydantic_utils import sqlalchemy_to_pydantic, ValidationError, PydanticDel
-from models.paas_model import IndexStepModel, IndexServiceModel
+from models.paas_model import IndexStepModel, ServiceCategoriesModel, IndexServiceModel
 
 PydanticFavorites = sqlalchemy_to_pydantic(IndexStepModel, exclude=['id'])  # 排除自增ID
 PydanticFavoritesUP = sqlalchemy_to_pydantic(IndexStepModel)
+
+opt_server_list_obj = CommonOptView(ServiceCategoriesModel)
 
 
 def get_step_list() -> dict:
@@ -140,7 +141,7 @@ def get_service_list(**params) -> dict:
 
         # 分页查询
         page = paginate(query, **params)
-    return dict(code=0, msg="创建成功", data=page.items, count=page.total)
+    return dict(code=0, msg="查询成功", data=page.items, count=page.total)
 
 
 def add_service(data: dict):
@@ -183,3 +184,12 @@ def del_service(data: dict) -> dict:
         return dict(code=-3, msg=f'删除失败, {str(err)}')
 
     return dict(code=0, msg="删除成功")
+
+
+def get_service_categories(**params) -> dict:
+    params.setdefault('page_size', 300)
+    with DBContext('r') as session:
+        query = session.query(ServiceCategoriesModel)
+        # 分页查询
+        page = paginate(query, **params)
+    return dict(code=0, msg="查询成功", data=page.items, count=page.total)

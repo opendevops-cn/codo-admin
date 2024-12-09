@@ -160,6 +160,15 @@ class IndexStepModel(TimeBaseModel, Base):
     faqs = Column(JSON, nullable=True)           # FAQ 列表，存储为 JSON
 
 
+class ServiceCategoriesModel(TimeBaseModel, Base):
+    __tablename__ = 'codo_index_service_list'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False, index=True)  # 分类名称
+    img = Column(String(100), nullable=False)  # 图标名称对应前端保存的图片
+    description = Column(String(255), nullable=True)  # 描述
+
+
 class IndexServiceModel(TimeBaseModel, Base):
     __tablename__ = 'codo_index_service'
 
