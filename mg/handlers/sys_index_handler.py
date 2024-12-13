@@ -96,12 +96,12 @@ class IndexService(BaseHandler, ABC):
 
 
 index_step_urls = [
-    (r"/v4/ops-step-service/", IndexStepHandler, {"handle_name": "PAAS-基础功能-首页步骤管理", "method": ["ALL"]}),
-    (r"/v4/ops-service-categories/", ServiceCategoriesHandler, {"handle_name": "PAAS-基础功能-首页服务列表", "method": ["ALL"]}),
-    (r"/v4/ops-index-service/", IndexServiceHandler, {"handle_name": "PAAS-基础功能-首页服务管理", "method": ["ALL"]}),
-    (r"/v4/na/index-step/", IndexStep, {"handle_name": "PAAS-基础功能-首页步骤", "method": ["GET"]}),  # 免认证
-    (r"/v4/na/index-service-categories/", ServiceCategories, {"handle_name": "PAAS-基础功能-首页服务定制表", "method": ["GET"]}),
-    (r"/v4/na/index-service/", IndexService, {"handle_name": "PAAS-基础功能-首页服务", "method": ["GET"]})  # 免认证
+    (r"/v4/ops-step-service/", IndexStepHandler, {"handle_name": "PAAS管理-首页-步骤管理", "method": ["ALL"]}),
+    (r"/v4/ops-service-categories/", ServiceCategoriesHandler, {"handle_name": "PAAS管理-首页-服务列表", "method": ["ALL"]}),
+    (r"/v4/ops-index-service/", IndexServiceHandler, {"handle_name": "PAAS管理-首页-服务管理", "method": ["ALL"]}),
+    (r"/v4/na/index-step/", IndexStep),  # 免认证  首页步骤"
+    (r"/v4/na/index-service-categories/", ServiceCategories),   # 免认证 首页服务定制表
+    (r"/v4/na/index-service/", IndexService)  # 免认证  首页服务
 ]
 
 if __name__ == "__main__":

@@ -163,12 +163,12 @@ class RoleSyncHandler(BaseHandler, ABC):
 roles_v4_urls = [
     (r"/v4/role/list/", RoleListHandler, {"handle_name": "PAAS-基础功能-查看常规角色列表", "method": ["GET"]}),
     (r"/v4/role/base_list/", RoleBaseListHandler, {"handle_name": "PAAS-基础功能-查看所有基础角色", "method": ["GET"]}),
-    (r"/v3/accounts/role/", RoleHandler, {"handle_name": "角色列表-待销毁", "method": ["ALL"]}),
+    # (r"/v3/accounts/role/", RoleHandler, {"handle_name": "角色列表-待销毁", "method": ["ALL"]}),
     (r"/v4/role/", RoleHandler, {"handle_name": "权限中心-角色管理V4", "method": ["ALL"]}),
     (r"/v4/role/sync/", RoleSyncHandler, {"handle_name": "权限中心-角色权限同步", "method": ["ALL"]}),
     (r"/v4/role_user/", RoleUserHandler, {"handle_name": "权限中心-角色用户管理", "method": ["ALL"]}),
     # TODO 暂时保留
-    (r"/v3/accounts/all_role_user/", RoleUserAllHandler, {"handle_name": "查询所有用户角色-待废弃", "method": ["GET"]}),
+    # (r"/v3/accounts/all_role_user/", RoleUserAllHandler, {"handle_name": "查询所有用户角色-待废弃", "method": ["GET"]}),
     (r"/v4/all_role_user/", RoleUserAllHandler, {"handle_name": "权限中心-查询所有用户角色V4", "method": ["GET"]})
 ]
 

@@ -252,8 +252,8 @@ class CheckSettingsHandler(BaseHandler, ABC):
 
 
 sys_mg_v4_urls = [
-    (r"/v4/app/opt_log/", LogV4Handler, {"handle_name": "PAAS管理-操作日志V4"}),
-    (r"/v4/na/conf/", OpenConfHandler),  # PAAS管理-开放配置v4
+    (r"/v4/app/opt_log/", LogV4Handler, {"handle_name": "PAAS管理-操作日志V4", "method": ["GET"]}),
+    (r"/v4/na/conf/", OpenConfHandler),   # PAAS-基础功能-开放配置
     (r'/v4/sysconfig/settings/', AppSettingsHandler, {"handle_name": "PAAS管理-系统设置", "method": ["ALL"]}),
     (r'/v4/sysconfig/check/', CheckSettingsHandler, {"handle_name": "PAAS管理-系统设置检查", "method": ["ALL"]}),
     (r'/v4/authority/register/', AuthorityRegister, {"handle_name": "PAAS管理-权限注册", "method": ["ALL"]}),

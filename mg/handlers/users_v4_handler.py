@@ -186,7 +186,6 @@ user_v4_mg_urls = [
     (r"/v4/user/send_addr/", UserAddrHandler, {"handle_name": "PAAS-基础功能-查看用户联系方式", "method": ["GET"]}),
     (r"/v4/reset_mfa/", ResetMFAHandler, {"handle_name": "PAAS管理-重置二次认证", "method": ["ALL"]}),
     (r"/v4/reset_pw/", ResetPasswordHandler, {"handle_name": "PAAS管理-重置密码", "method": ["ALL"]}),
-    (r"/v3/accounts/user/", UserHandler, {"handle_name": "权限中心-用户管理-待废弃", "method": ["ALL"]}),
     (r"/v4/user/", UserHandler, {"handle_name": "权限中心-用户管理V4", "method": ["ALL"]}),
 ]
 

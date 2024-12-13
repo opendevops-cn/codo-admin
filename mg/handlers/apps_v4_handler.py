@@ -14,7 +14,7 @@ from websdk2.db_context import DBContextV2 as DBContext
 
 from libs.base_handler import BaseHandler
 from models.authority import RoleApps
-from services.app_service import get_apps_list_for_main, get_apps_list_for_api, opt_obj, get_apps_list_for_role
+from services.app_service import get_apps_list_for_main, get_apps_list_for_api, opt_obj, get_apps_list_for_role, get_apps_list_for_frontend
 
 
 class RoleAPPHandler(BaseHandler, ABC):
@@ -100,11 +100,17 @@ class AppListHandler(BaseHandler, ABC):
         self.write(res)
 
 
+class FrontendAppListHandler(BaseHandler, ABC):
+    def get(self, *args, **kwargs):
+        res = get_apps_list_for_frontend(**self.params)
+        self.write(res)
+
+
 apps_urls = [
     (r"/v4/apps/", AppsV4Handler, {"handle_name": "PAAS管理-应用管理", "method": ["ALL"]}),
     (r"/v4/role_app/", RoleAPPHandler, {"handle_name": "权限中心-应用角色管理", "method": ["ALL"]}),
-    (r"/v4/apps/list/", AppListHandler, {"handle_name": "PAAS-基础功能-查看应用列表", "method": ["GET"]}),
-    (r"/v4/na/apps/list/", AppListHandler, {"handle_name": "PAAS-基础功能-免认证查看应用列表", "method": ["GET"]})
+    (r"/v4/apps/list/", AppListHandler, {"handle_name": "PAAS-基础功能-查看应用-待删除", "method": ["GET"]}),  # TODO 待删除
+    (r"/v4/na/apps/list/", FrontendAppListHandler)  # 免认证查看应用列表
 ]
 
 if __name__ == "__main__":
