@@ -67,7 +67,6 @@ def get_apps_list_for_frontend(**params) -> dict:
             frontend_code = __dict.get('frontend_code')
             if frontend_code == 'no':
                 continue
-            __dict["app_code"] = frontend_code if frontend_code else __dict.get('app_code')  # TODO 前端变更后删除
             __dict["frontend_code"] = frontend_code if frontend_code else __dict.get('app_code')
 
             filtered_apps.append(__dict)
