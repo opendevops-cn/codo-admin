@@ -9,6 +9,7 @@ Desc    : 应用相关逻辑
 
 import base64
 import json
+import logging
 from abc import ABC
 from concurrent.futures import ThreadPoolExecutor
 
@@ -106,14 +107,15 @@ class AuthorityRegister(BaseHandler):
             try:
                 self.register_func(func_list)
             except Exception as err:
-                print(err)
-                return self.write(dict(code=-2, msg='注册API权限失败'))
+                logging.error(f"注册API权限失败  {err}")
+                # return self.write(dict(code=-2, msg='注册API权限失败'))
 
         if menu_list and isinstance(menu_list, list):
             try:
                 self.register_menu(menu_list)
             except Exception as err:
-                return self.write(dict(code=-3, msg='注册前端菜单失败'))
+                logging.error(f"注册前端菜单失败  {err}")
+                # return self.write(dict(code=-3, msg='注册前端菜单失败'))
 
         if component_list and isinstance(component_list, list):
             try:
@@ -130,23 +132,19 @@ class AuthorityRegister(BaseHandler):
         return self.write(dict(code=0, msg='注册结束'))
 
     def register_menu(self, data):
-        for d in data:
-            menu_name = d.get('name')
-            details = d.get('details', '')[0:250]
-            if not menu_name: continue
+        valid_data = filter(lambda d: d.get('name'), data)
+        for d in valid_data:
             with DBContext('w', None, True) as session:
+                menu_name = d['name']
+                details = (d.get('details') or '')[:250]
                 try:
                     session.add(insert_or_update(Menus, f"menu_name='{menu_name}' and app_code='{self.app_code}'",
-                                                 app_code=self.app_code, details=details,
-                                                 menu_name=menu_name))
-                except exc.IntegrityError as e:
-                    print(e)
+                                                 app_code=self.app_code, details=details, menu_name=menu_name))
                 except Exception as err:
-                    print(err)
-
+                    logging.error(err)
+            session.commit()
     def register_component(self, data):
         for d in data:
-            status = d.get('status', '0')
             name = d.get('name')
             details = d.get('details', '')[0:250]
             if not name: continue
@@ -155,8 +153,6 @@ class AuthorityRegister(BaseHandler):
                     session.add(insert_or_update(Components,
                                                  f"name='{name}' and app_code='{self.app_code}'",
                                                  app_code=self.app_code, details=details, name=name))
-                except exc.IntegrityError as e:
-                    print(e)
                 except Exception as err:
                     print(err)
 

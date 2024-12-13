@@ -104,8 +104,7 @@ apps_urls = [
     (r"/v4/apps/", AppsV4Handler, {"handle_name": "PAAS管理-应用管理", "method": ["ALL"]}),
     (r"/v4/role_app/", RoleAPPHandler, {"handle_name": "权限中心-应用角色管理", "method": ["ALL"]}),
     (r"/v4/apps/list/", AppListHandler, {"handle_name": "PAAS-基础功能-查看应用列表", "method": ["GET"]}),
-    (r"/v4/na/apps/list/", AppListHandler, {"handle_name": "PAAS-基础功能-免认证查看应用列表", "method": ["GET"]}),
-
+    (r"/v4/na/apps/list/", AppListHandler, {"handle_name": "PAAS-基础功能-免认证查看应用列表", "method": ["GET"]})
 ]
 
 if __name__ == "__main__":

@@ -143,7 +143,7 @@ class BizChangeNaHandler(BaseHandler, ABC):
 
 biz_v4_mg_urls = [
     (r"/v4/biz/", BusinessHandler, {"handle_name": "权限中心-业务管理", "method": ["ALL"]}),
-    (r"/v4/biz/list/", BusinessListHandler, {"handle_name": "PAAS基础功能-查看业务列表和切换", "method": ["GET"]}),
+    (r"/v4/biz/list/", BusinessListHandler, {"handle_name": "PAAS-基础功能-查看业务列表和切换", "method": ["GET"]}),
     (r"/v4/na/biz/list/", BizListNaHandler, {"handle_name": "PAAS-基础功能-免认证查看业务列表", "method": ["GET"]}),
     (r"/v4/na/biz/change/", BizChangeNaHandler, {"handle_name": "PAAS-基础功能-免认证切换业务", "method": ["GET"]})
 ]

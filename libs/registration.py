@@ -4,11 +4,13 @@
 Version : 0.0.1
 Contact : 191715030@qq.com
 Author  : shenshuo
-Date    : 2021/11/1 17:07
-Desc    : 注册各种信息到pass平台
+Date    : 2024/12/13 17:07
+Desc    : 注册各种信息到管理平台
 """
 
 import json
+import logging
+
 from websdk2.client import AcsClient
 from websdk2.configs import configs
 from settings import settings
@@ -16,40 +18,39 @@ from settings import settings
 if configs.can_import: configs.import_dict(**settings)
 client = AcsClient()
 
-# uri = "/api/mg/v3/accounts/authority/register/"
 uri = "/api/p/v4/authority/register/"
 
 menu_list = [
     {
         "name": "MGauthority",
-        "details": "权限-权限管理"
+        "details": "管理后台-权限-权限管理"
     }, {
         "name": "MGuserlist",
-        "details": "权限-用户列表"
+        "details": "管理后台-权限-用户列表"
     }, {
         "name": "MGtokenlist",
-        "details": "权限-令牌列表"
+        "details": "管理后台-权限-令牌列表"
     }, {
         "name": "MGLinklist",
-        "details": "权限-免密链接"
+        "details": "管理后台-权限-免密链接"
     }, {
         "name": "MGapplist",
-        "details": "权限-应用列表"
+        "details": "管理后台-权限-应用列表"
     }, {
         "name": "MGbusiness",
-        "details": "权限-业务管理列表"
+        "details": "管理后台-权限-业务管理列表"
     }, {
         "name": "MGmenus",
-        "details": "权限-菜单列表"
+        "details": "管理后台-权限-菜单列表"
     }, {
         "name": "MGcomponents",
-        "details": "权限-前端组件"
+        "details": "管理后台-权限-前端组件"
     }, {
         "name": "MGfunctions",
-        "details": "权限-权限列表"
+        "details": "管理后台-权限-权限列表"
     }, {
         "name": "MGrole",
-        "details": "权限-角色管理"
+        "details": "管理后台-权限-角色管理"
     },
     {
         "name": "systeMmanage",
@@ -61,19 +62,19 @@ menu_list = [
     },
     {
         "name": "systemEmail",
-        "details": "管理后台-邮件设置"
+        "details": "管理后台-配置-邮件设置"
     },
     {
         "name": "systemLdap",
-        "details": "管理后台-LDAP设置"
+        "details": "管理后台-配置-LDAP设置"
     },
     {
         "name": "systemBase",
-        "details": "管理后台-基础设置"
+        "details": "管理后台-配置-基础设置"
     },
     {
         "name": "systemFeishu",
-        "details": "管理后台-飞书设置"
+        "details": "管理后台-配置-飞书设置"
     },
     {
         "name": "systemAudit",
@@ -82,6 +83,22 @@ menu_list = [
     {
         "name": "systemAuditLog",
         "details": "管理后台-审计日志"
+    },
+    {
+        "name": "homepageManage",
+        "details": "管理后台-首页管理"
+    },
+    {
+        "name": "MGopsService",
+        "details": "管理后台-首页管理-导航页步骤"
+    },
+    {
+        "name": "MGopsGlobalCategory",
+        "details": "管理后台-首页管理-导航页项目分类"
+    },
+    {
+        "name": "MGopsGlobalService",
+        "details": "管理后台-首页管理-导航页项目服务"
     },
 ]
 component_list = [
@@ -242,7 +259,7 @@ def registration_to_paas():
                              body=json.dumps(body),
                              description='自动注册')
     response = client.do_action(**registration_data)
-    print(json.loads(response))
+    logging.info(json.loads(response))
     return response
 
 
@@ -250,6 +267,7 @@ class Registration:
     def __init__(self, **kwargs):
         pass
 
-    def start_server(self):
+    @staticmethod
+    def start_server():
         registration_to_paas()
         raise Exception('初始化完成')
