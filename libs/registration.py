@@ -214,7 +214,7 @@ method_dict = dict(
 
 
 def registration_to_paas():
-    app_code = "mg"
+    app_code = "p"
     api_info_url = f"/api/{app_code}/v1/probe/meta/urls/"
     func_info = client.do_action_v2(**dict(
         method='GET',
@@ -222,8 +222,6 @@ def registration_to_paas():
     ))
     if func_info.status_code == 200:
         temp_func_list = func_info.json().get('data')
-        # func_list.append(dict(method_type='ALL', name=f"{app_code}-管理员", uri=f"/api/{app_code}/*"))
-        # func_list.append(dict(method_type='GET', name=f"{app_code}-查看所有", uri=f"/api/{app_code}/*"))
         for f in temp_func_list:
             if 'name' not in f or f.get('name') == '暂无': continue
             for m, v in method_dict.items():

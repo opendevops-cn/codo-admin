@@ -25,12 +25,13 @@ class AppsModel(TimeBaseModel, Base):
     # 应用名称表
     id = Column('id', Integer, primary_key=True, autoincrement=True)
     name = Column('name', String(100), unique=True)
-    app_code = Column('app_code', String(100), index=True)  #
+    app_code = Column('app_code', String(100), index=True)  # 后端code
+    frontend_code = Column('frontend_code', String(100), index=True)  # 前端code
     href = Column('href', String(255), default='')  # 前端直接跳转的URL  没用接入的应用使用
     # path = Column('path', String(255), default='')  # 文件加载地址
     img = Column('img', String(255), default='')  # 图片地址
     icon = Column('icon', String(255), default='')  # 图标
-    classify = Column('classify', String(50), default='SaaS', index=True)  # 分类
+    classify = Column('classify', String(50), default='其他', index=True)  # 分类
     description = Column('description', String(250), default='')  # 描述、备注
 
 

@@ -73,14 +73,16 @@ class AppsV4Handler(BaseHandler, ABC):
 
     def post(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        data.setdefault("classify", "SaaS")
+        data.setdefault("classify", "其他")
+        data['frontend_code'] = data.get('frontend_code') or "no"
         res = opt_obj.handle_add(data)
 
         self.write(res)
 
     def put(self, *args, **kwargs):
         data = json.loads(self.request.body.decode("utf-8"))
-        data.setdefault("classify", "SaaS")
+        data.setdefault("classify", "其他")
+        data['frontend_code'] = data.get('frontend_code') or "no"
         res = opt_obj.handle_update(data)
 
         self.write(res)
