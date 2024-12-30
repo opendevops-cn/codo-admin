@@ -23,7 +23,7 @@ from websdk2.consts import const
 from websdk2.db_context import DBContext
 from websdk2.jwt_token import gen_md5
 from websdk2.ldap import LdapApi
-from websdk2.model_utils import insert_or_update
+from libs.feature_model_utils import insert_or_update
 from websdk2.tools import check_password
 
 from libs.base_handler import BaseHandler

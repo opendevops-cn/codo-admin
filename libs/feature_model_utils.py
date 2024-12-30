@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*-coding:utf-8-*-
 """
-Author : shenshuo
-Date   : 2019年12月11日
+Contact : 191715030@qq.com
+Author  : shenshuo
+Date   : 2024/12/30 20:28
 Desc   : models类
 """
 
@@ -33,30 +34,6 @@ def model_to_dict(model):
 def queryset_to_list(queryset, **kwargs) -> list:
     if kwargs: return [model_to_dict(q) for q in queryset if get_contain_dict(kwargs, model_to_dict(q))]
     return [model_to_dict(q) for q in queryset]
-
-
-def GetInsertOrUpdateObj(cls: Type, str_filter: str, **kw) -> classmethod:
-    """
-    cls:            Model 类名
-    str_filter:      filter的参数.eg:"name='name-14'" 必须设置唯一 支持 and or
-    **kw:           【属性、值】字典,用于构建新实例，或修改存在的记录
-    session.add(GetInsertOrUpdateObj(TableTest, "name='name-114'", age=33114, height=123.14, name='name-114'))
-    """
-    with DBContext('r') as session:
-        existing = session.query(cls).filter(text(str_filter)).first()
-    if not existing:
-        res = cls()
-        for k, v in kw.items():
-            if hasattr(res, k):
-                setattr(res, k, v)
-        return res
-    else:
-        res = existing
-        for k, v in kw.items():
-            if hasattr(res, k):
-                setattr(res, k, v)
-
-        return res
 
 
 def insert_or_update(cls: Type[DeclarativeMeta], str_filter: str, **kw) -> Union[None, DeclarativeMeta]:

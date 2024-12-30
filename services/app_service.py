@@ -11,8 +11,6 @@ Desc    : 解释一下吧
 from sqlalchemy import or_
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.sqlalchemy_pagination import paginate
-
-# from websdk2.model_utils import CommonOptView, queryset_to_list
 from libs.feature_model_utils import CommonOptView, queryset_to_list, model_to_dict
 from models.authority import RoleApps
 from models.paas_model import AppsModel

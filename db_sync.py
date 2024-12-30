@@ -8,6 +8,7 @@ Desc    : 数据表生成
 """
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
 from websdk2.consts import const
 from settings import settings as app_settings
 from models.paas_model import Base as AppsBase
@@ -17,13 +18,16 @@ from models.authority import Base as AuBase
 
 default_configs = app_settings[const.DB_CONFIG_ITEM][const.DEFAULT_DB_KEY]
 
-engine = create_engine(
-    f'mysql+pymysql://{default_configs.get(const.DBUSER_KEY)}:'
-    f'{default_configs.get(const.DBPWD_KEY)}@{default_configs.get(const.DBHOST_KEY)}:'
-    f'{default_configs.get(const.DBPORT_KEY)}/{default_configs.get(const.DBNAME_KEY)}'
-    f'?charset=utf8mb4',
-    echo=True
+url_object = URL.create(
+    drivername='mysql+pymysql',
+    username=default_configs.get(const.DBUSER_KEY),
+    password=default_configs.get(const.DBPWD_KEY),
+    host=default_configs.get(const.DBHOST_KEY),
+    port=int(default_configs.get(const.DBPORT_KEY)),
+    database=default_configs.get(const.DBNAME_KEY),
+    query={'charset': 'utf8mb4'}
 )
+engine = create_engine(url_object, echo=True)
 
 
 def create():

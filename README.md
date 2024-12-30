@@ -39,51 +39,6 @@
 
 - 系统日志 （从API网关获取日志，当然也可以自行从基类获取）
 
-### 结构
-
-```shell
-├── doc
-│   ├── data.sql
-│   ├── deployment.md
-│   ├── nginx_ops.conf
-│   ├── requirements.txt
-│   └── supervisor_ops.conf
-├── docker-compose.yml
-├── Dockerfile
-├── __init__.py
-├── libs
-│   ├── base_handler.py
-│   ├── __init__.py
-│   ├── my_verify.py
-│   └── utils.py
-├── mg
-│   ├── applications.py
-│   ├── handlers
-│   │   ├── app_mg_handler.py
-│   │   ├── app_settings_handler.py
-│   │   ├── components_v4_handler.py
-│   │   ├── configs_init.py
-│   │   ├── functions_v4_handler.py
-│   │   ├── __init__.py
-│   │   ├── login_handler.py
-│   │   ├── menus_v4_handler.py
-│   │   ├── notifications_handler.py
-│   │   ├── roles_handler.py
-│   │   ├── users_v4_handler.py
-│   │   └── verify_handler.py
-│   ├── __init__.py
-│   └── subscribe.py
-├── models
-│   ├── admin.py
-│   ├── app_config.py
-│   ├── __init__.py
-├── README.md
-├── settings.py
-└── startup.py
-```
-
-### 展示
-
 ### 用户管理
 
 > 这部分文档主要用来介绍用户管理，它可以很精细的管理你的用户权限

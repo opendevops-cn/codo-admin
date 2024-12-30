@@ -19,7 +19,7 @@ from websdk2.configs import configs
 from websdk2.consts import const
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.jwt_token import gen_md5
-from websdk2.model_utils import insert_or_update
+from libs.feature_model_utils import insert_or_update
 from websdk2.tools import RedisLock, now_timestamp, convert
 
 from libs.etcd import Etcd3Client

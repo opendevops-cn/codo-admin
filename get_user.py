@@ -13,7 +13,7 @@ import time
 
 import requests
 from websdk2.db_context import DBContextV2 as DBContext
-from websdk2.model_utils import insert_or_update
+from libs.feature_model_utils import insert_or_update
 
 from models.authority import Users
 from settings import settings
