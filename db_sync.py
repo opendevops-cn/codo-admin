@@ -7,6 +7,7 @@ Date    : 2018/12/24
 Desc    : 数据表生成
 """
 
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 from websdk2.consts import const
@@ -34,9 +35,9 @@ def create():
     try:
         AuBase.metadata.create_all(engine)
         AppsBase.metadata.create_all(engine)
-        print('[Success] 表结构创建成功!')
+        logging.info('[Success] 表结构创建成功!')
     except Exception as err:
-        print(f'[Error] {err}!')
+        logging.error(f'[Error] {err}!')
 
 
 def drop():

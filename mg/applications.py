@@ -8,8 +8,8 @@ role   : 管理端 Application
 
 from abc import ABC
 from tornado.ioloop import PeriodicCallback
-from websdk2.application import Application as myApplication
-# from libs.feature_application import Application as myApplication
+# from websdk2.application import Application as myApplication
+from libs.feature_application import Application as myApplication
 from libs.sync_user_verift_v4 import async_api_permission_v4, async_user_center
 from mg.handlers import urls
 from mg.subscribe import RedisSubscriber as SubApp
