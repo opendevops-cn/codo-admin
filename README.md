@@ -1,10 +1,10 @@
 ## CODO 管理后台
 
-[更新日志](https://github.com/ss1917/do_mg/releases)
+[用户手册](docs/用户手册【管理后台】.md)
 
-[用户手册](docs%2F%D3%C3%BB%A7%CA%D6%B2%E1%A1%BE%B9%DC%C0%ED%BA%F3%CC%A8%A1%BF.md)
+[部署文档](docs/deployment.md)
 
-[部署文档](docs%2Fdeployment.md)
+[更新日志](https://github.com/opendevops-cn/codo-admin/releases)
 
 [在线访问](http://demo.opendevops.cn/)
 
