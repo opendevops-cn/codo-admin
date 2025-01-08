@@ -1,6 +1,6 @@
 ## CODO 管理后台
 
-[用户手册](docs/用户手册【管理后台】.md)
+[用户手册](docs/codo-admin.md)
 
 [部署文档](docs/deployment.md)
 
