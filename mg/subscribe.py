@@ -152,6 +152,7 @@ class RedisSubscriber:
                 finally:
                     lastid = id  # 无论是出错还是正常执行完毕,都要去读取下一个,否则可能会无限循环读取处理报错的数据
                 self.redis_conn.xack(self.stream_name, self.group_name, id)
+                self.redis_conn.xdel(self.stream_name, id)
             time.sleep(2)  # 间隔时长，自取
 
     def start_server_old(self):
