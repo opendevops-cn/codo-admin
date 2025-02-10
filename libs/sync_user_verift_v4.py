@@ -19,10 +19,10 @@ from websdk2.configs import configs
 from websdk2.consts import const
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.jwt_token import gen_md5
-from libs.feature_model_utils import insert_or_update
 from websdk2.tools import RedisLock, now_timestamp, convert
 
 from libs.etcd import Etcd3Client
+from libs.feature_model_utils import insert_or_update
 from models.authority import Users, Roles, UserRoles, RoleFunctions, Functions, UserToken
 from models.paas_model import BizModel
 from services.role_service import get_all_user_list_for_role
@@ -455,6 +455,15 @@ def sync_all_user_list_for_role():
     get_all_user_list_for_role()
 
 
+@deco2(RedisLock("async_archive_old_logs_lock_key"))
+def archive_old_logs():
+    try:
+        from services.audit_service import archive_data
+        archive_data()
+    except Exception as err:
+        logging.error(f"归档审计日志出错 {err}")
+
+
 def async_api_permission_v4():
     # 启用线程去同步任务，防止阻塞
     obj = MyVerify()
@@ -465,6 +474,11 @@ def async_api_permission_v4():
     executor.submit(sync_user_to_gw)
     executor.submit(obj.sync_token_block_to_gw)
     executor.submit(obj.sync_biz_to_gw)
+
+
+def async_archive_old_logs():
+    executor = ThreadPoolExecutor(max_workers=1)
+    executor.submit(archive_old_logs)
 
 
 def async_user_center():

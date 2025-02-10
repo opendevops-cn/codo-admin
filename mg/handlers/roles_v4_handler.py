@@ -140,9 +140,22 @@ class RoleUserAllHandler(BaseHandler, ABC):
         pass
 
     def get(self, *args, **kwargs):
-        role_list = get_all_user_list_for_role()
+        role_list, _ = get_all_user_list_for_role()
 
         return self.write(dict(code=0, msg='获取成功', data=role_list))
+
+
+class RolesUsersAllHandler(BaseHandler, ABC):
+    def prepare(self):
+        pass
+
+    def get(self, *args, **kwargs):
+        users_by_name, users_by_id = get_all_user_list_for_role()
+
+        return self.write(dict(code=0, msg='获取成功', data=dict(
+            users_by_name=users_by_name,
+            users_by_id=users_by_id
+        )))
 
 
 class RoleSyncHandler(BaseHandler, ABC):
@@ -167,9 +180,9 @@ roles_v4_urls = [
     (r"/v4/role/", RoleHandler, {"handle_name": "权限中心-角色管理V4", "method": ["ALL"]}),
     (r"/v4/role/sync/", RoleSyncHandler, {"handle_name": "权限中心-角色权限同步", "method": ["ALL"]}),
     (r"/v4/role_user/", RoleUserHandler, {"handle_name": "权限中心-角色用户管理", "method": ["ALL"]}),
-    # TODO 暂时保留
-    # (r"/v3/accounts/all_role_user/", RoleUserAllHandler, {"handle_name": "查询所有用户角色-待废弃", "method": ["GET"]}),
-    (r"/v4/all_role_user/", RoleUserAllHandler, {"handle_name": "权限中心-查询所有用户角色V4", "method": ["GET"]})
+    # TODO  待废弃
+    (r"/v4/all_role_user/", RoleUserAllHandler, {"handle_name": "权限中心-查询所有用户角色V4", "method": ["GET"]}),
+    (r"/v4/all_roles_users/", RolesUsersAllHandler, {"handle_name": "权限中心-查询所有用户角色", "method": ["GET"]})
 ]
 
 if __name__ == "__main__":

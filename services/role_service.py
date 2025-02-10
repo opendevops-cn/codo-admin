@@ -90,7 +90,7 @@ def get_users_for_role(**kwargs) -> dict:
     return dict(code=0, msg='获取成功', data=queryset, count=count)
 
 
-def get_all_user_list_for_role(**kwargs):
+def get_all_user_list_for_role(**kwargs) -> tuple:
     role_user_dict = dict()
     role_id_user_dict = dict()
     with DBContext('r') as session:
@@ -118,7 +118,7 @@ def get_all_user_list_for_role(**kwargs):
             role_id_user_dict[role_id] = {user_id: "y"}
         redis_conn = cache_conn()
         redis_conn.set(ROLE_USER_INFO_STR, json.dumps(role_id_user_dict))
-    return role_user_dict
+    return role_user_dict, role_id_user_dict
 
 
 def role_sync_all():

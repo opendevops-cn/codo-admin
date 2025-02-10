@@ -68,7 +68,7 @@ settings = dict(
     settings_auth_key=settings_auth_key,
     oss_data_private=oss_data_private,
     etcd_prefix=etcd_prefix,
-    app_name='codo_mg',
+    app_name='codo-admin',
     databases={
         const.DEFAULT_DB_KEY: {
             const.DBHOST_KEY: DEFAULT_DB_DBHOST,
