@@ -8,7 +8,7 @@ desc   : 平台管理
 
 from datetime import datetime
 from sqlalchemy import Column, String, Integer, DateTime, Text, JSON, UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from models import TimeBaseModel
 
 Base = declarative_base()
