@@ -62,18 +62,34 @@ def get_biz_list_for_api(**params) -> dict:
 
 def add_init_default():
     # 添加初始化 公共项目
-    with DBContext('w', None, True) as session:
-        is_exist = session.query(BizModel).filter(BizModel.biz_cn_name == '所有项目').first()
-        if is_exist:
-            return
+    # with DBContext('w', None, True) as session:
+    #     is_exist = session.query(BizModel).filter(BizModel.biz_cn_name == '所有项目').first()
+    #     if is_exist:
+    #         return
+    #
+    #     session.add(BizModel(**dict(biz_cn_name='所有项目', biz_en_name='all', biz_id=str(500), life_cycle='已上线')))
+    #     session.add(
+    #         BizModel(**dict(biz_cn_name='公共项目', biz_en_name='public', biz_id=str(501), life_cycle='已上线')))
+    #     session.add(
+    #         BizModel(**dict(biz_cn_name='默认项目', biz_en_name='default', biz_id=str(502), life_cycle='已上线')))
+    #     session.add(
+    #         BizModel(**dict(biz_cn_name='运维项目', biz_en_name='ops', biz_id=str(504), life_cycle='已上线')))
 
-        session.add(BizModel(**dict(biz_cn_name='所有项目', biz_en_name='all', biz_id=str(500), life_cycle='已上线')))
-        session.add(
-            BizModel(**dict(biz_cn_name='公共项目', biz_en_name='public', biz_id=str(501), life_cycle='已上线')))
-        session.add(
-            BizModel(**dict(biz_cn_name='默认项目', biz_en_name='default', biz_id=str(502), life_cycle='已上线')))
-        session.add(
-            BizModel(**dict(biz_cn_name='运维项目', biz_en_name='ops', biz_id=str(504), life_cycle='已上线')))
+    init_data = [
+        dict(biz_cn_name='所有项目', biz_en_name='all', biz_id='500', life_cycle='已上线'),
+        dict(biz_cn_name='公共项目', biz_en_name='public', biz_id='501', life_cycle='已上线'),
+        dict(biz_cn_name='默认项目', biz_en_name='default', biz_id='502', life_cycle='已上线'),
+        dict(biz_cn_name='运维项目', biz_en_name='ops', biz_id='504', life_cycle='已上线')
+    ]
+    with DBContext('w', None, True) as session:
+        # 获取已存在的项目名称
+        existing_names = {row.biz_cn_name for row in session.query(BizModel.biz_cn_name).all()}
+
+        # 过滤需要插入的记录
+        new_records = [BizModel(**data) for data in init_data if data['biz_cn_name'] not in existing_names]
+
+        if new_records:
+            session.add_all(new_records)
     return
 
 
@@ -126,52 +142,6 @@ def can_view_biz(is_superuser, user_id, biz_model):
     # Check if the user is a superuser or has access to the business
     return is_superuser or biz_model.biz_id in ['501', '502'] or str(user_id) in biz_model.users_info
 
-# def get_biz_tree(**params) -> list:
-#     # TODO 后续补充权限
-#     the_tree = []
-#     is_superuser = params.get('is_superuser')
-#     user = params.get('user')
-#     with DBContext('r') as session:
-#         b_set = session.query(TenantModel).all()
-#         for t in b_set:
-#             tmp_data = dict(
-#                 label=t.name,
-#                 tenantid=t.tenantid,
-#                 value=t.tenantid,
-#                 id=t.id,
-#                 children=[{
-#                     "label": biz.biz_cn_name,
-#                     "biz_id": biz.biz_id,
-#                     "value": biz.biz_id,
-#                     "id": biz.id,
-#                 } for biz in t.biz if is_superuser or user in biz.ext_info]
-#             )
-#             the_tree.append(tmp_data)
-#     return the_tree
-
-
-# def _get_t_value(value: str = None):
-#     if not value:
-#         return True
-#     return or_(
-#         TenantModel.tenantid.like(f'%{value}%'),
-#         TenantModel.name.like(f'%{value}%')
-#     )
-#
-#
-# def get_tenant_list_for_api(**params) -> dict:
-#     value = params.get('searchValue') if "searchValue" in params else params.get('searchVal')
-#
-#     filter_map = params.pop('filter_map') if "filter_map" in params else {}
-#     if 'biz_id' in filter_map:
-#         filter_map.pop('biz_id')
-#     if 'page_size' not in params:
-#         params['page_size'] = 300  # 默认获取到全部数据
-#
-#     with DBContext('r') as session:
-#         page = paginate(session.query(TenantModel).filter(_get_t_value(value)).filter_by(**filter_map), **params)
-#     return dict(msg='获取成功', code=0, count=page.total, data=page.items)
-
 
 def _get_s_value(value: str = None):
     if not value:
@@ -185,6 +155,9 @@ def sync_biz_role_user(**params):
     the_id = params.get('id')
     redis_conn = cache_conn()
     role_user_info = redis_conn.get(ROLE_USER_INFO_STR)
+    if not role_user_info:
+        logging.error(f"ROLE_USER_INFO_STR 为空")
+        return
     role_user_dict = json.loads(convert(role_user_info))
     new_data = []
 

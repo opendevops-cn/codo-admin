@@ -9,9 +9,7 @@ Desc    : 解释一下吧
 """
 
 import json
-from loguru import logger
 from sqlalchemy import or_
-from websdk2.tools import RedisLock
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.sqlalchemy_pagination import paginate
 from websdk2.cache_context import cache_conn
@@ -40,11 +38,19 @@ def _get_role_type(value: str = None):
     )
 
 
+# def get_role_list_for_api(**params) -> dict:
+#     filter_map = params.pop('filter_map', {})
+#     if 'biz_id' in filter_map: filter_map.pop('biz_id')  # 暂时不隔离
+#     filter_map['role_type'] = params.get('role_type')
+#     res = opt_obj.handle_list(params,_get_value)
+#
+#     return res
+
+
 def get_role_list_for_api(**params) -> dict:
-    value = params.get('searchValue') if "searchValue" in params else params.get('searchVal')
-    filter_map = params.pop('filter_map') if "filter_map" in params else {}
-    if 'biz_id' in filter_map: filter_map.pop('biz_id')  # 暂时不隔离
-    if 'page_size' not in params: params['page_size'] = 300  # 默认获取到全部数据
+    value = params.get('searchValue', params.get('searchVal'))
+    filter_map = params.pop('filter_map', {})
+    params.setdefault('page_size', 300)  # 统一处理默认值
     role_type = params.get('role_type')
     with DBContext('r') as session:
         page = paginate(

@@ -107,3 +107,46 @@ def get_user_noc_addr(users_str: str, roles_str: str) -> dict:
 
     user_addr_info = {'tel': tel_list, 'email': email_list, 'dd_id': ddid_list, 'fs_id': fsid_list}
     return dict(code=0, msg='获取成功', data=user_addr_info)
+
+
+def get_user_noc_addr_v2(users_str: str, roles_str: str) -> dict:
+    notice_users = set()  # 使用 set 自动去重，提高效率
+
+    with DBContext('r') as session:
+        if users_str:
+            notice_users.update(users_str.split(','))
+
+        if roles_str:
+            role_id_list: list[str] = roles_str.split(',')
+            role_users = {  # 集合推导式，更简洁高效
+                user.username
+                for user in session.query(Users)
+                .outerjoin(UserRoles, UserRoles.user_id == Users.id)
+                .filter(UserRoles.role_id.in_(role_id_list), Users.status == '0')
+                .all()
+            }
+            notice_users.update(role_users)
+
+        # 只有当 notice_users 不为空时才查询数据库，避免浪费资源
+        if notice_users:
+            user_info = session.query(Users.tel, Users.email, Users.dd_id, Users.fs_id).filter(
+                or_(
+                    Users.id.in_(notice_users),
+                    Users.nickname.in_(notice_users),
+                    Users.username.in_(notice_users),
+                )
+            ).all()
+
+            # 列表推导式，更简洁高效
+            tel_list = [u.tel for u in user_info if u.tel]
+            email_list = [u.email for u in user_info if u.email]
+            dd_id_list = [u.dd_id for u in user_info if u.dd_id]
+            fs_id_list = [u.fs_id for u in user_info if u.fs_id]
+        else:  # 处理空列表的情况，避免返回 None
+            tel_list = []
+            email_list = []
+            dd_id_list = []
+            fs_id_list = []
+
+    user_addr_info = {'tel': tel_list, 'email': email_list, 'dd_id': dd_id_list, 'fs_id': fs_id_list}
+    return dict(code=0, msg='获取成功', data=user_addr_info)

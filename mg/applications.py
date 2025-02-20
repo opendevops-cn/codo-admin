@@ -6,6 +6,7 @@ date   : 2017-10-11
 role   : 管理端 Application
 """
 
+import logging
 from abc import ABC
 from tornado.ioloop import PeriodicCallback
 from websdk2.application import Application as myApplication
@@ -19,7 +20,7 @@ class Application(myApplication, ABC):
     def __init__(self, **settings):
         # 归档日志
         check_callback_archive = PeriodicCallback(async_archive_old_logs, 36000000)  # 36000000 10小时
-        # check_callback_archive.start()
+        check_callback_archive.start()
 
         # 同步用户
         check_callback_user = PeriodicCallback(async_user_center, 3600000)  # 3600000  一个小时
@@ -30,7 +31,17 @@ class Application(myApplication, ABC):
         check_callback_permission.start()
         super(Application, self).__init__(urls, **settings)
         self.sub_app = SubApp(**settings)
-        self.sub_app.start_server()
+
+    def start_server(self):
+        try:
+            logging.info('codo admin server start successful.')
+            self.sub_app.start_server()
+            self.io_loop.start()
+        except KeyboardInterrupt:
+            self.io_loop.stop()
+            logging.info("Server shut down gracefully.")
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}", exc_info=True)
 
 
 if __name__ == '__main__':

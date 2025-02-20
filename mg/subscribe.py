@@ -29,7 +29,8 @@ class RedisSubscriber:
         self.group_name = "gw-consumer-group"
         self.stream_name = channel
         redis_info = settings.get(const.REDIS_CONFIG_ITEM, None).get(const.DEFAULT_RD_KEY, None)
-        if not redis_info:  exit('not redis')
+        if not redis_info:
+            exit('not redis')
         self.pool = redis.ConnectionPool(host=redis_info.get(const.RD_HOST_KEY),
                                          port=redis_info.get(const.RD_PORT_KEY, 6379),
                                          db=redis_info.get(const.RD_DB_KEY, 0),
@@ -37,12 +38,13 @@ class RedisSubscriber:
         self.redis_conn = redis.StrictRedis(connection_pool=self.pool)
         # self.channel = channel  # 定义频道名称
         self.__settings = settings
-        ### 创建消费者组
+        # 创建消费者组
         self.create_consumer_group(self.stream_name, self.group_name)
 
     @staticmethod
     def process_message(msg_id, fields):
-        if 'test' in fields: return {}
+        if 'test' in fields:
+            return {}
         # logging.info(msg_id)
 
         log_data = list(fields.values())[0]
@@ -54,7 +56,7 @@ class RedisSubscriber:
         if "user_info" in log_data_dict: user_info = log_data_dict.pop('user_info')
         ###
         log_data_dict['user_id'] = user_info.get('user_id', '-1')
-        log_data_dict['username'] = user_info.get('username', 'nimingyonghu')
+        log_data_dict['username'] = user_info.get('username', 'guest')
         log_data_dict['nickname'] = user_info.get('nickname', '匿名用户')
 
         log_data_dict['scheme'] = request_data.get('scheme')
@@ -77,14 +79,18 @@ class RedisSubscriber:
                 request_data_data = json.loads(request_data_data)
                 if "password" in request_data_data: request_data_data['password'] = "*********************"
                 request_data_data = json.dumps(request_data_data)
-        except:
-            pass
+        except Exception as e:
+            logging.info(f"{e}")
 
         log_data_dict['rq_data'] = request_data_data
         try:
-            log_data_dict['trace_id'] = request_data.get('headers').get('x-trace-id')[0:80]
-        except:
-            pass
+            trace_id = request_data.get('headers').get('x-trace-id')
+            if trace_id:
+                log_data_dict['trace_id'] = trace_id[:80]
+            else:
+                log_data_dict['trace_id'] = None
+        except Exception as e:
+            logging.info(f"Failed to extract trace_id: {e}")
 
         log_data_dict['response_status'] = response_data.get('status')
         log_data_dict['response_data'] = str(response_data)
@@ -95,7 +101,6 @@ class RedisSubscriber:
             log_data_dict['start_time'] = times
         except Exception as err:
             logging.error(f"datetime.datetime.fromtimestamp  {err}")
-        # logging.info(log_data_dict)
         return log_data_dict
 
     def create_consumer_group(self, stream_name, group_name):
@@ -147,22 +152,13 @@ class RedisSubscriber:
                     # 这里是你要做的事情，封一个函数这里调用即可
                     # pass
                 except Exception as e:
-                    print('subscribe_msgs', e)
+                    logging.error(f'subscribe_msgs {e}')
                     continue
                 finally:
                     lastid = id  # 无论是出错还是正常执行完毕,都要去读取下一个,否则可能会无限循环读取处理报错的数据
                 self.redis_conn.xack(self.stream_name, self.group_name, id)
                 self.redis_conn.xdel(self.stream_name, id)
             time.sleep(2)  # 间隔时长，自取
-
-    def start_server_old(self):
-        print('start', datetime.datetime.now())
-        # print(self.consumer_name)
-        # consumer_name_list = [f'{self.consumer_name}1', f'{self.consumer_name}2', f'{self.consumer_name}3']
-        self.subscribe_msgs()
-
-        # with ThreadPoolExecutor() as executor:
-        #     executor.map(self.subscribe_msgs, consumer_name_list)
 
     def start_server(self):
         executor = ThreadPoolExecutor(max_workers=1)

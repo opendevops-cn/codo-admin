@@ -10,7 +10,8 @@ from datetime import datetime
 from sqlalchemy import Column, String, Integer, JSON, UniqueConstraint, Text
 from sqlalchemy import DateTime
 from sqlalchemy.dialects.mysql import LONGTEXT, MEDIUMTEXT
-from sqlalchemy.ext.declarative import declarative_base
+# from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from websdk2.utils.cc_crypto import AESCryptoV3
 
 from models import TimeBaseModel
