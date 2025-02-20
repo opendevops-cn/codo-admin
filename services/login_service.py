@@ -7,13 +7,11 @@ role   : 用户登录
 """
 
 import logging
-import json
 import base64
 import pyotp
 from typing import *
 from shortuuid import uuid
-from loguru import logger
-from urllib.parse import urlparse
+from datetime import datetime
 from websdk2.jwt_token import AuthToken, gen_md5
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.consts import const
@@ -52,7 +50,7 @@ async def ldap_verify(username, password):
                                               ldap_conf.get(const.LDAP_ATTRIBUTES),
                                               ldap_conf.get(const.LDAP_SEARCH_FILTER))
         except Exception as err:
-            logger.error(f"LDAP信息出错 {err}")
+            logging.error(f"LDAP信息出错 {err}")
             return dict(code=-4, msg='LDAP信息出错')
 
         if not ldap_pass_info[0]:
@@ -75,7 +73,7 @@ async def ldap_verify(username, password):
         return user_info
 
     except Exception as err:
-        logger.error(f"LDAP信息出错 {err}")
+        logging.error(f"LDAP信息出错 {err}")
         return {'code': -4, 'msg': 'LDAP信息出错'}
 
 
@@ -87,7 +85,7 @@ async def uc_verify(**kwargs) -> Optional[Users]:
     try:
         return OtherAuthV3(**kwargs)()
     except Exception as err:
-        logger.error(err)
+        logging.error(err)
         return None
 
 
@@ -101,6 +99,7 @@ def update_login_ip(user_id: str, login_ip_list: str):
             user = session.query(Users).filter(Users.id == user_id).first()
             if user:
                 user.last_ip = login_ip
+                user.last_login = datetime.now()
                 session.commit()
             else:
                 logging.error(f"用户不存在: {user_id}")

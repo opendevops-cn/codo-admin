@@ -41,7 +41,7 @@ class Users(Base):
     create_time = Column(DateTime, nullable=False, default=datetime.now)  # 记录的创建时间
     update_time = Column(DateTime, nullable=False, default=datetime.now, index=True)  # 更新时间
     last_ip = Column('last_ip', String(20), default='')
-    last_login = Column('last_login', DateTime(), default=datetime.now, onupdate=datetime.now)
+    last_login = Column('last_login', DateTime(), default=datetime.now)
 
     __table_args__ = (UniqueConstraint('username', 'nickname', name="username_and_nickname"),
                       UniqueConstraint('username', 'email', name="username_and_email"),)
