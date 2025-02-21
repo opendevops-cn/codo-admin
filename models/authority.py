@@ -20,7 +20,7 @@ class Users(Base):
     # 用户表
     id = Column('id', Integer, primary_key=True, autoincrement=True)
     username = Column('username', String(50), nullable=False, index=True)
-    password = Column('password', String(100))
+    password = Column('password', String(200))
     nickname = Column('nickname', String(100), nullable=False, index=True)
     email = Column('email', String(80), index=True)  # 邮箱
     tel = Column('tel', String(18), index=True)  # 手机号
@@ -36,15 +36,18 @@ class Users(Base):
     have_token = Column('have_token', String(5), default='no')
     fs_open_id = Column('fs_open_id', String(180), default='')  # 飞书 open id
     fs_id = Column('fs_id', String(180), default='')  # 飞书ID
-    ext_info = Column('ext_info', JSON(), default={}, comment='扩展字段存JSON')  # 扩展字段
+    last_ip = Column('last_ip', String(20), default='')
+    last_login = Column('last_login', DateTime(), default=datetime.now)
     ##
     create_time = Column(DateTime, nullable=False, default=datetime.now)  # 记录的创建时间
     update_time = Column(DateTime, nullable=False, default=datetime.now, index=True)  # 更新时间
-    last_ip = Column('last_ip', String(20), default='')
-    last_login = Column('last_login', DateTime(), default=datetime.now)
+    ext_info = Column('ext_info', JSON(), default={}, comment='扩展字段存JSON')  # 扩展字段
 
     __table_args__ = (UniqueConstraint('username', 'nickname', name="username_and_nickname"),
                       UniqueConstraint('username', 'email', name="username_and_email"),)
+
+    def __repr__(self):
+        return f"<User(username='{self.username}', nickname='{self.nickname}', email='{self.email}')>"
 
 
 class Roles(TimeBaseModel, Base):

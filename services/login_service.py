@@ -15,7 +15,7 @@ from datetime import datetime
 from websdk2.jwt_token import AuthToken, gen_md5
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.consts import const
-from websdk2.ldap import LdapApi
+from websdk2.ldap import LdapApiV4
 from libs.login_by_feishu import FeiShuAuth
 from libs.login_by_other import OtherAuthV3
 from services.sys_service import get_sys_conf_dict_for_me
@@ -43,12 +43,12 @@ async def ldap_verify(username, password):
             return dict(code=-5, msg='请补全LDAP信息')
 
         try:
-            obj = LdapApi(ldap_conf.get(const.LDAP_SERVER_HOST), ldap_conf.get(const.LDAP_ADMIN_DN),
-                          ldap_conf.get(const.LDAP_ADMIN_PASSWORD), ldap_conf.get(const.LDAP_USE_SSL))
+            obj = LdapApiV4(ldap_conf.get(const.LDAP_SERVER_HOST), ldap_conf.get(const.LDAP_ADMIN_DN),
+                            ldap_conf.get(const.LDAP_ADMIN_PASSWORD), ldap_conf.get(const.LDAP_USE_SSL))
 
-            ldap_pass_info = obj.ldap_auth_v3(username, password, ldap_conf.get(const.LDAP_SEARCH_BASE),
-                                              ldap_conf.get(const.LDAP_ATTRIBUTES),
-                                              ldap_conf.get(const.LDAP_SEARCH_FILTER))
+            ldap_pass_info = obj.ldap_auth(username, password, ldap_conf.get(const.LDAP_SEARCH_BASE),
+                                           ldap_conf.get(const.LDAP_ATTRIBUTES),
+                                           ldap_conf.get(const.LDAP_SEARCH_FILTER))
         except Exception as err:
             logging.error(f"LDAP信息出错 {err}")
             return dict(code=-4, msg='LDAP信息出错')

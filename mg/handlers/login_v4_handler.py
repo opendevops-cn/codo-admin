@@ -67,12 +67,12 @@ class LoginHandler(RequestHandler, ABC):
             return dict(code=-5, msg='请补全LDAP信息')
 
         try:
-            obj = LdapApi(ldap_conf.get(const.LDAP_SERVER_HOST), ldap_conf.get(const.LDAP_ADMIN_DN),
-                          ldap_conf.get(const.LDAP_ADMIN_PASSWORD), ldap_conf.get(const.LDAP_USE_SSL))
+            obj = LdapApiV4(ldap_conf.get(const.LDAP_SERVER_HOST), ldap_conf.get(const.LDAP_ADMIN_DN),
+                            ldap_conf.get(const.LDAP_ADMIN_PASSWORD), ldap_conf.get(const.LDAP_USE_SSL))
 
-            ldap_pass_info = obj.ldap_auth_v3(username, password, ldap_conf.get(const.LDAP_SEARCH_BASE),
-                                              ldap_conf.get(const.LDAP_ATTRIBUTES),
-                                              ldap_conf.get(const.LDAP_SEARCH_FILTER))
+            ldap_pass_info = obj.ldap_auth(username, password, ldap_conf.get(const.LDAP_SEARCH_BASE),
+                                           ldap_conf.get(const.LDAP_ATTRIBUTES),
+                                           ldap_conf.get(const.LDAP_SEARCH_FILTER))
         except Exception as err:
             logger.error(f"LDAP信息出错 {err}")
             return dict(code=-4, msg='LDAP信息出错')
@@ -196,7 +196,6 @@ class LoginHandler(RequestHandler, ABC):
         self.finish(real_login_dict)
 
 
-
 class AuthorizationHandler(BaseHandler, ABC):
     async def get(self, *args, **kwargs):
         page_data, component_data, avatar = {'all': False}, {'all': False}, ''
@@ -286,7 +285,7 @@ class LoginFSHandler(RequestHandler, ABC):
         feishu_login_dict = dict(code=code, fs_redirect_uri=fs_redirect_uri, fs_conf=fs_conf)
 
         user_info = yield self.feishu_authentication(**feishu_login_dict)
-        print(user_info)
+        # print(user_info)
 
         if not user_info:
             return self.write(dict(code=-4, msg='账号异常'))

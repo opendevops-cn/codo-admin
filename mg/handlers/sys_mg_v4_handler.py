@@ -22,7 +22,7 @@ from websdk2.base_handler import LivenessProbe
 from websdk2.consts import const
 from websdk2.db_context import DBContext
 from websdk2.jwt_token import gen_md5
-from websdk2.ldap import LdapApi
+from websdk2.ldap import LdapApiV4
 from libs.feature_model_utils import insert_or_update
 from websdk2.tools import check_password
 
@@ -143,6 +143,7 @@ class AuthorityRegister(BaseHandler):
                 except Exception as err:
                     logging.error(err)
             session.commit()
+
     def register_component(self, data):
         for d in data:
             name = d.get('name')
@@ -226,11 +227,10 @@ class CheckSettingsHandler(BaseHandler, ABC):
 
     @run_on_executor(executor='_thread_pool')
     def send_test_ldap(self, data):
-        obj = LdapApi(data.get(const.LDAP_SERVER_HOST), data.get(const.LDAP_ADMIN_DN),
-                      data.get(const.LDAP_ADMIN_PASSWORD),
-                      data.get(const.LDAP_USE_SSL))
-        obj.ldap_server_test()
-        return True
+        obj = LdapApiV4(data.get(const.LDAP_SERVER_HOST), data.get(const.LDAP_ADMIN_DN),
+                        data.get(const.LDAP_ADMIN_PASSWORD),
+                        data.get(const.LDAP_USE_SSL))
+        return obj.test_server_connection()
 
     @gen.coroutine
     def post(self, *args, **kwargs):
@@ -253,7 +253,7 @@ class CheckSettingsHandler(BaseHandler, ABC):
 
 sys_mg_v4_urls = [
     (r"/v4/app/opt_log/", LogV4Handler, {"handle_name": "PAAS管理-操作日志V4", "method": ["GET"]}),
-    (r"/v4/na/conf/", OpenConfHandler),   # PAAS-基础功能-开放配置
+    (r"/v4/na/conf/", OpenConfHandler),  # PAAS-基础功能-开放配置
     (r'/v4/sysconfig/settings/', AppSettingsHandler, {"handle_name": "PAAS管理-系统设置", "method": ["ALL"]}),
     (r'/v4/sysconfig/check/', CheckSettingsHandler, {"handle_name": "PAAS管理-系统设置检查", "method": ["ALL"]}),
     (r'/v4/authority/register/', AuthorityRegister, {"handle_name": "PAAS管理-权限注册", "method": ["ALL"]}),
