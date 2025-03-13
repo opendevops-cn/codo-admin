@@ -65,7 +65,7 @@ def sync_user_from_ucenter():
                     except Exception as err:
                         print('del', err)
                     continue
-                if username.startswith('wb-'): continue
+                # if username.startswith('wb-'): continue
 
                 try:
                     session.add(insert_or_update(Users,

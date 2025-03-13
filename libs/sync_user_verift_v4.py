@@ -2,8 +2,7 @@
 # -*-coding:utf-8-*-
 """
 author : shenshuo
-date   : 2017年11月15日
-role   : 权限同步和鉴定
+date   : 2025年02月28日
 """
 
 import datetime
@@ -378,7 +377,7 @@ def sync_user_from_uc():
                     except Exception as err:
                         print('del', err)
                     continue
-                if username.startswith('wb-'): continue
+                # if username.startswith('wb-'): continue
 
                 try:
                     session.add(insert_or_update(Users,

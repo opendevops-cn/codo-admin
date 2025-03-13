@@ -7,11 +7,13 @@ Desc   : 配置文件
 """
 
 import os
+import logging
 from websdk2.consts import const
 
 ROOT_DIR = os.path.dirname(__file__)
 debug = True
 xsrf_cookies = False
+log_level = logging.DEBUG
 expire_seconds = 365 * 24 * 60 * 60
 max_body_size = 3 * 1024 * 1024 * 1024
 max_buffer_size = 3 * 1024 * 1024 * 1024
@@ -57,6 +59,7 @@ except:
 
 settings = dict(
     debug=debug,
+    log_level=log_level,
     xsrf_cookies=xsrf_cookies,
     cookie_secret=cookie_secret,
     token_secret=token_secret,
