@@ -40,8 +40,6 @@ class Application(TornadoApp):
         max_buffer_size = configs.get("max_buffer_size")
         max_body_size = configs.get("max_body_size")
         super().__init__(handlers, **configs)
-        logging.getLogger().setLevel(logging.DEBUG)
-        print(logging.DEBUG,logging.INFO,logging.ERROR,type(logging.DEBUG))
         self.http_server = httpserver.HTTPServer(
             self, max_buffer_size=max_buffer_size, max_body_size=max_body_size
         )

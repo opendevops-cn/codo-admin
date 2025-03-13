@@ -13,7 +13,7 @@ from websdk2.consts import const
 ROOT_DIR = os.path.dirname(__file__)
 debug = True
 xsrf_cookies = False
-log_level = logging.DEBUG
+log_level = logging.INFO
 expire_seconds = 365 * 24 * 60 * 60
 max_body_size = 3 * 1024 * 1024 * 1024
 max_buffer_size = 3 * 1024 * 1024 * 1024
