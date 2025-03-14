@@ -5,5 +5,5 @@ aliyun-python-sdk-core-v3==2.13.11
 aliyun-python-sdk-core-v3
 oss2==2.14.0
 cos-python-sdk-v5==1.9.25
-pydantic===2.3.0
+pydantic===2.4.0
 SQLAlchemy===2.0.20
