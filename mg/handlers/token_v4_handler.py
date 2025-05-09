@@ -48,7 +48,7 @@ class TokenHandler(BaseHandler, ABC):
         is_superuser = True if user_info.superuser == '0' else False
 
         token_info = dict(user_id=user_id, username=user_info.username, nickname=user_info.nickname,
-                          is_superuser=is_superuser, exp_days=1825)
+                          is_superuser=is_superuser, exp_days=3650)
         auth_token = AuthToken()
         auth_key = auth_token.encode_auth_token_v2(**token_info)
         if isinstance(auth_key, bytes): auth_key = auth_key.decode()
@@ -69,10 +69,10 @@ class TokenHandler(BaseHandler, ABC):
             mail_to = session.query(Users.email).filter(Users.id == self.get_current_id()).first()
 
         if mail_to[0] == user_info.email:
-            obj.send_mail(mail_to[0], '令牌，有效期五年', auth_key, subtype='plain')
+            obj.send_mail(mail_to[0], '令牌，有效期十年', auth_key, subtype='plain')
         else:
-            obj.send_mail(mail_to[0], '令牌，有效期五年', auth_key, subtype='plain')
-            obj.send_mail(user_info.email, '令牌，有效期五年', auth_key, subtype='plain')
+            obj.send_mail(mail_to[0], '令牌，有效期十年', auth_key, subtype='plain')
+            obj.send_mail(user_info.email, '令牌，有效期十年', auth_key, subtype='plain')
         return self.write(dict(code=0, msg='Token已经发送到邮箱', data=auth_key))
 
     def patch(self, *args, **kwargs):
