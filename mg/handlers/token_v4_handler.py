@@ -59,7 +59,7 @@ class TokenHandler(BaseHandler, ABC):
                                                           UserToken.status != '10').count()
             if token_count >= 3:  return self.write(dict(code=-5, msg='不能拥有太多的token'))
 
-            expire_time = datetime.now() + timedelta(days=+360 * 5)
+            expire_time = datetime.now() + timedelta(days=+365 * 10)
             session.add(UserToken(user_id=int(user_id), nickname=user_info.nickname, token=auth_key,
                                   expire_time=expire_time, token_md5=gen_md5(auth_key)))
 

@@ -126,7 +126,7 @@ class AuthKeyInit(BaseCommand):
     def handle(self):
         auth_token = AuthToken()
         token = auth_token.encode_auth_token_v2(
-            exp_days=18250,  # 五年
+            exp_days=3650,  # 五年
             user_id=99999,  # You should replace this with the actual user_id
             username="codo",
             nickname="系统用户",
