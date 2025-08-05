@@ -24,7 +24,9 @@ opt_obj = CommonOptView(SystemSettings)
 
 init_conf = {
     'feishu_access_url': 'https://passport.feishu.cn/suite/passport/oauth/token',
-    'feishu_user_info_url': 'https://passport.feishu.cn/suite/passport/oauth/userinfo'
+    'feishu_user_info_url': 'https://passport.feishu.cn/suite/passport/oauth/userinfo',
+    'dingtalk_access_url': 'https://oapi.dingtalk.com/gettoken',
+    'dingtalk_user_info_url': 'https://oapi.dingtalk.com/sns/getuserinfo_bycode'
 }
 
 
@@ -45,7 +47,14 @@ def _get_value(value: str = None):
         return or_(
             SystemSettings.name.like(f'feishu_%'),
         )
-
+    elif value == 'dingtalk':
+        return or_(
+            SystemSettings.name.like(f'dingtalk_%'),
+        )
+    elif value == 'wechatwork':
+        return or_(
+            SystemSettings.name.like(f'wechatwork_%'),
+        )
     return or_(
         SystemSettings.name.like(f'%{value}%'),
     )
@@ -64,7 +73,7 @@ def get_sys_conf_dict(**params) -> dict:
 
 
 def get_sys_open_conf_dict(**params) -> dict:
-    show_conf = ["feishu_client_id"]
+    show_conf = ["feishu_client_id", "dingtalk_client_id", "wechatwork_client_id"]
     with DBContext('r') as session:
         __info = session.query(SystemSettings).all()
     conf_dict = dict()

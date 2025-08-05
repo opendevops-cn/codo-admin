@@ -10,14 +10,14 @@ import base64
 import json
 import logging
 from abc import ABC
-
+import time
 import pyotp
 from tornado.web import RequestHandler
 from websdk2.jwt_token import AuthToken
 
 from libs.base_handler import BaseHandler
-from services.login_service import update_login_ip, base_verify, ldap_verify, feishu_verify, uc_verify, \
-    generate_token, get_user_info_for_id
+from services.login_service import update_login_ip, base_verify, ldap_verify, feishu_verify, dingtalk_verify, \
+    wechatwork_verify, uc_verify, generate_token, get_user_info_for_id, generate_auth_and_refresh_token, get_user_info
 from services.sys_service import get_sys_conf_dict_for_me
 
 
@@ -26,20 +26,42 @@ class LoginHandler(RequestHandler, ABC):
     def check_xsrf_cookie(self):
         pass
 
-    async def authenticate(self, username, password, login_type, data):
+    async def authenticate(self, username: str, password: str, login_type: str, data: dict):
+        """
+        用户认证函数，根据不同的登录类型调用相应的认证方法。
+
+        :param username: 用户名
+        :param password: 密码，可能是 Base64 编码的字符串
+        :param login_type: 登录类型，例如 'feishu', 'dingtalk', 'wechatwork', 'ldap', 'base'
+        :param data: 附加数据，用于特定登录类型的认证
+        :return: 登录结果，成功返回用户信息，失败返回错误信息
+        """
+
+        if login_type in ['feishu', 'dingtalk', 'wechatwork']:
+            try:
+                conf = get_sys_conf_dict_for_me(category=login_type)
+                login_dict = {
+                    'feishu': dict(code=data.get('code'), fs_redirect_uri=data.get('fs_redirect_uri'), fs_conf=conf),
+                    'dingtalk': dict(code=data.get('code'), dd_redirect_uri=data.get('dd_redirect_uri'), dd_conf=conf),
+                    'wechatwork': dict(code=data.get('code'), wx_redirect_uri=data.get('wx_redirect_uri'), wx_conf=conf)
+                }.get(login_type)
+
+                verify_function = {'feishu': feishu_verify, 'dingtalk': dingtalk_verify,
+                                   'wechatwork': wechatwork_verify}.get(login_type)
+
+                return await verify_function(**login_dict)
+
+            except Exception as err:
+                logging.error(f"{login_type} 登录失败: {err}")
+                return dict(code=-1, msg=f'{login_type} 登录失败')
+
         if password:
             try:
                 password = base64.b64decode(password).decode("utf-8")
                 password = base64.b64decode(password).decode("utf-8")
             except Exception as err:
-                logging.error(err)
+                logging.error(f"密码解码失败: {err}")
                 return dict(code=-1, msg='账号密码错误')
-
-        if login_type == 'feishu':
-            fs_conf = get_sys_conf_dict_for_me(**dict(category='feishu'))
-            feishu_login_dict = dict(code=data.get('code'), fs_redirect_uri=data.get('fs_redirect_uri'),
-                                     fs_conf=fs_conf)
-            return await feishu_verify(**feishu_login_dict)
 
         if login_type == 'ldap':
             return await ldap_verify(username, password)
@@ -86,6 +108,7 @@ class LoginHandler(RequestHandler, ABC):
         else:
             auth_key = generate_token_dict.get('auth_key')
             mfa_key = generate_token_dict.get('mfa_key')
+            refresh_token = generate_token_dict.get('refresh_token', '')
 
         # 更新登录IP 和登录时间
         update_login_ip(user_id, self.request.headers.get("X-Forwarded-For"))
@@ -95,6 +118,7 @@ class LoginHandler(RequestHandler, ABC):
         self.set_secure_cookie("username", user_info.username)
         self.set_secure_cookie("user_id", user_id)
         self.set_cookie("auth_key", auth_key, expires_days=1)
+        self.set_cookie("refresh_token", refresh_token, httponly=True, expires_days=3)
         self.set_cookie("is_login", 'yes', expires_days=1)
         if mfa_key:
             self.set_cookie("mfa_key", mfa_key, expires_days=1, httponly=True)
@@ -164,10 +188,51 @@ class LogoutHandler(RequestHandler, ABC):
         self.finish()
 
 
+class RefreshTokenHandler(RequestHandler, ABC):
+    def post(self):
+        try:
+            refresh_token = self.get_cookie("refresh_token")
+            if not refresh_token:
+                self.set_status(401)
+                self.write({"code": -1, "msg": "缺失 refresh_token in cookie"})
+                return
+
+            auth_token = AuthToken()
+            try:
+                payload = auth_token.decode_auth_token(refresh_token)
+                user_id = payload.get("user_id")
+                if not user_id:
+                    raise ValueError("Invalid payload")
+            except Exception as e:
+                self.set_status(401)
+                self.write({"code": -1, "msg": f"Invalid or expired refresh token: {str(e)}"})
+                return
+
+            user_info = get_user_info(user_id)
+            if not user_info:
+                self.set_status(401)
+                self.write({"code": -1, "msg": "User not found or inactive"})
+                return
+
+            auth_key, refresh_token = generate_auth_and_refresh_token(user_info)
+
+            # 设置 cookies
+            self.set_cookie("auth_key", auth_key, expires_days=1)
+            self.set_cookie("refresh_token", refresh_token, httponly=True, expires_days=3)
+            self.set_cookie("is_login", "yes", expires_days=1)
+
+            self.write({"code": 0, "msg": "刷新成功", "reason": "", "timestamp": int(time.time() * 1000)})
+
+        except Exception as e:
+            self.set_status(500)
+            self.write({"code": -1, "msg": f"Server error: {str(e)}"})
+
+
 login_v5_urls = [
     (r"/v4/na/login/05/", LoginHandler),
     (r"/v4/na/logout/", LogoutHandler),
-    (r"/v4/verify/mfa/", VerifyMFAHandler)
+    (r"/v4/verify/mfa/", VerifyMFAHandler),
+    (r"/v4/na/refresh-token/", RefreshTokenHandler)
 ]
 
 if __name__ == "__main__":

@@ -15,6 +15,12 @@ from websdk2.cache_context import cache_conn
 from websdk2.db_context import DBContextV2 as DBContext
 from models.authority import Users
 
+"""
+feishu_client_id
+feishu_client_secret
+feishu_auth
+"""
+
 
 class FeiShuAuth:
     def __init__(self, **kwargs):
@@ -114,7 +120,6 @@ class FeiShuAuth:
 # url_dict = dict(
 #     test6667={
 #         "login_url": "http://10.241.0.40:8888/api/p/v4/login/feishu/",
-#         "real_url": "https://flow.huanle.com/#/orderCenter/order-list",
 #         "client_id": 'cli_a270b45f63b9100b'
 #     }
 # )

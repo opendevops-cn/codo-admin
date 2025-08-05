@@ -12,11 +12,13 @@ import pyotp
 from typing import *
 from shortuuid import uuid
 from datetime import datetime
-from websdk2.jwt_token import AuthToken, gen_md5
+from websdk2.jwt_token import AuthToken, gen_md5, generate_otp_secret
 from websdk2.db_context import DBContextV2 as DBContext
 from websdk2.consts import const
 from websdk2.ldap import LdapApiV4
 from libs.login_by_feishu import FeiShuAuth
+from libs.login_by_dingtalk import DingTalkAuth
+from libs.login_by_wechatwork import WechatWorkAuth
 from libs.login_by_other import OtherAuthV3
 from services.sys_service import get_sys_conf_dict_for_me
 from models.authority import Users
@@ -81,6 +83,14 @@ async def feishu_verify(**kwargs) -> Optional[Users]:
     return FeiShuAuth(**kwargs)()
 
 
+async def dingtalk_verify(**kwargs) -> Optional[Users]:
+    return DingTalkAuth(**kwargs)()
+
+
+async def wechatwork_verify(**kwargs) -> Optional[Users]:
+    return WechatWorkAuth(**kwargs)()
+
+
 async def uc_verify(**kwargs) -> Optional[Users]:
     try:
         return OtherAuthV3(**kwargs)()
@@ -125,9 +135,116 @@ async def generate_token(user_info, dynamic=None):
                       email=user_info.email, is_superuser=True if user_info.superuser == '0' else False)
 
     auth_key = auth_token.encode_auth_token_v2(**token_info)
+    refresh_token = auth_token.encode_auth_token_v2(user_id=user_info.id, exp_days=3)
     if isinstance(auth_key, bytes):
         auth_key = auth_key.decode()
-    return dict(auth_key=auth_key, mfa_key=mfa_key)
+    return dict(auth_key=auth_key, refresh_token=refresh_token, mfa_key=mfa_key)
+
+
+async def generate_token_v2(user_info, dynamic=None):
+    """
+    生成用户认证令牌的函数，支持 MFA 验证流程。
+
+    参数:
+        user_info: 用户信息对象，包含用户的ID、邮箱、用户名、昵称、超级用户标识等属性。
+        dynamic: 动态验证码（MFA 认证码），可选。
+
+    返回:
+        dict: 包含认证令牌 (auth_key) 和 MFA 令牌 (mfa_key) 的字典，或错误提示信息。
+    """
+    # 获取系统配置
+    __conf = get_sys_conf_dict_for_me()
+    auth_token = AuthToken()
+    user_id = str(user_info.id)
+
+    # 判断 MFA 配置状态
+    mfa_global_open = __conf.get(const.MFA_GLOBAL, "no") == "yes"
+    is_superuser = user_info.superuser == '0'
+    mfa_admin_only = __conf.get(const.MFA_ADMIN_ONLY, "yes") == "yes" and is_superuser
+
+    # 进入 MFA 验证逻辑
+    if mfa_global_open or mfa_admin_only:
+        if not user_info.google_key:
+            otp_secret = generate_otp_secret()
+            # 未绑定 Google 验证器
+            return {"code": 88, "msg": "跳转扫码页面", "data": {"otp_secret": otp_secret}}
+
+        if not dynamic:
+            # 已绑定 Google 验证器但未提供动态码
+            return {"code": 66, "msg": "跳转二次认证"}
+
+        # 验证动态码
+        totp = pyotp.TOTP(user_info.google_key)
+        if not totp.verify(dynamic, valid_window=1):
+            return {"code": -5, "msg": "MFA错误"}
+
+        # 动态码验证通过
+        mfa_key = auth_token.encode_mfa_token(user_id=user_id, email=user_info.email)
+    else:
+        mfa_key = None  # 无需 MFA 时，MFA Key 为空
+
+    # 准备认证令牌信息
+    token_info = {
+        "user_id": user_id,
+        "username": user_info.username,
+        "nickname": user_info.nickname,
+        "email": user_info.email,
+        "is_superuser": is_superuser
+    }
+
+    # 生成认证令牌
+    auth_key = auth_token.encode_auth_token_v2(**token_info)
+    auth_key = auth_key.decode() if isinstance(auth_key, bytes) else auth_key
+
+    # 返回结果
+    return {"auth_key": auth_key, "mfa_key": mfa_key}
+
+
+def generate_auth_and_refresh_token(user_info: Users) -> tuple[str, str]:
+    auth_token = AuthToken()
+    token_info = {
+        "user_id": user_info.id,
+        "username": user_info.username,
+        "nickname": user_info.nickname,
+        "email": user_info.email,
+        "is_superuser": True if user_info.superuser == '0' else False
+    }
+
+    access_token = auth_token.encode_auth_token_v2(**token_info)
+    refresh_token = auth_token.encode_auth_token_v2(user_id=user_info.id, exp_days=3)
+
+    if isinstance(access_token, bytes):
+        access_token = access_token.decode()
+    if isinstance(refresh_token, bytes):
+        refresh_token = refresh_token.decode()
+
+    return access_token, refresh_token
+
+
+def get_user_info(user_id: int) -> Optional[Users]:
+    with DBContext('r') as session:
+        user = session.query(Users).filter(
+            Users.id == user_id,
+            Users.status != '10'
+        ).first()
+    return user
+
+
+def set_new_otp_secret(user_info: Optional[Users], otp_secret: str):
+    try:
+        with DBContext('w', None, True) as session:
+            # 确保 user_info 附加到当前 session
+            if not session.contains(user_info):
+                user_info = session.merge(user_info)
+
+            # 更新 Google 验证器密钥
+            user_info.google_key = otp_secret
+            session.commit()
+        return True
+    except Exception as e:
+        # 日志记录或错误处理
+        logging.error(f"Failed to update OTP secret: {e}")
+        return False
 
 
 def get_user_info_for_id(user_id: int) -> Optional[Users]:

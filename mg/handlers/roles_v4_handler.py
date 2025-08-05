@@ -8,12 +8,12 @@ Desc    : 角色管理
 """
 
 import json
+import logging
 from abc import ABC
 from concurrent.futures import ThreadPoolExecutor
 from tornado.concurrent import run_on_executor
 from sqlalchemy.exc import IntegrityError
 from libs.base_handler import BaseHandler
-from websdk2.cache_context import cache_conn
 from websdk2.db_context import DBContextV2 as DBContext
 from services.role_service import get_role_list_for_api, get_normal_role_list_for_api, get_base_role_list_for_api, \
     opt_obj, get_users_for_role, get_all_user_list_for_role, role_sync_all
@@ -115,7 +115,7 @@ class RoleUserHandler(BaseHandler, ABC):
             except IntegrityError as e:
                 pass
             except Exception as err:
-                print(err)
+                logging.error(f"角色关联出错：{err}")
 
         try:
             with DBContext('w', None, True) as session:
@@ -129,7 +129,7 @@ class RoleUserHandler(BaseHandler, ABC):
         except IntegrityError as e:
             print(e)
         except Exception as err:
-            print(err)
+            logging.error(f"用户角色移除出错：{err}")
         ###
         await self.handle_sync()
         return self.write(dict(code=0, msg='用户加入角色成功'))
