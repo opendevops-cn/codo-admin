@@ -189,7 +189,7 @@ class LogoutHandler(RequestHandler, ABC):
 
 
 class RefreshTokenHandler(RequestHandler, ABC):
-    def post(self):
+    def get(self):
         try:
             refresh_token = self.get_cookie("refresh_token")
             if not refresh_token:
