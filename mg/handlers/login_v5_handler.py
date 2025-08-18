@@ -221,7 +221,8 @@ class RefreshTokenHandler(RequestHandler, ABC):
             self.set_cookie("refresh_token", refresh_token, httponly=True, expires_days=3)
             self.set_cookie("is_login", "yes", expires_days=1)
 
-            self.write({"code": 0, "msg": "刷新成功", "reason": "", "timestamp": int(time.time() * 1000)})
+            self.write({"code": 0, "msg": "刷新成功", "auth_key": auth_key,
+                        "reason": "", "timestamp": int(time.time() * 1000)})
 
         except Exception as e:
             self.set_status(500)
