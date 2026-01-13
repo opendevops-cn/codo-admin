@@ -30,6 +30,7 @@ def _get_biz_value(value: str = None):
         BizModel.biz_cn_name.like(f'%{value}%'), BizModel.biz_en_name.like(f'%{value}%'),
         BizModel.biz_sre.like(f'%{value}%'), BizModel.biz_developer.like(f'%{value}%'),
         BizModel.biz_tester.like(f'%{value}%'), BizModel.life_cycle.like(f'%{value}%'),
+        BizModel.biz_id.like(f'%{value}%'),
     )
 
 
@@ -41,6 +42,8 @@ def get_biz_list_for_api(**params) -> dict:
         filter_map.pop('biz_id')  # 暂时不隔离
     if 'page_size' not in params:
         params['page_size'] = 300  # 默认获取到全部数据
+    if 'order_by' not in params:
+        params['order_by'] = "biz_id"
     add_init_default()
     with DBContext('r') as session:
         page = paginate(session.query(BizModel).filter(_get_biz_value(value)).filter_by(**filter_map), **params)
