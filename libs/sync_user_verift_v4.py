@@ -26,6 +26,8 @@ from models.authority import Users, Roles, UserRoles, RoleFunctions, Functions, 
 from models.paas_model import BizModel
 from services.role_service import get_all_user_list_for_role
 from settings import settings
+from libs.idp.feishu import LarkDepartment
+from services.idp_service import batch_create_departments, get_users_from_role_idp_departments
 
 if configs.can_import: configs.import_dict(**settings)
 
@@ -122,14 +124,27 @@ class MyVerify:
                 Functions.id, Functions.func_name, Functions.app_code, Functions.uri, Functions.method_type
             ).outerjoin(RoleFunctions, Functions.id == RoleFunctions.func_id
                         ).filter(Functions.status == '0', RoleFunctions.role_id.in_(_role_list)).all()
-
+            
+            # 收集改角色的所有用户id(系统用户 + 身份提供商用户)
+            all_user_ids = set()
+            
+            # 直接添加系统用户
+            all_user_ids.add(i.user_id)
+            
+            # 获取并添加身份提供商部门的用户
+            try:
+                idp_user_ids = get_users_from_role_idp_departments(role.id, session=session)
+                all_user_ids.update(idp_user_ids)
+            except Exception as err:
+                logging.error(f"获取身份提供商部门用户出错: {err}")
+            
             for func in func_list:
                 key = f"{func.id}---{func.func_name}---{func.app_code}---{func.uri}---{func.method_type}"
-                val = i.user_id
-                if key in api_permissions_dict:
-                    api_permissions_dict[key][val] = "y"
-                else:
-                    api_permissions_dict[key] = {val: "y"}
+                for user_id in all_user_ids:
+                    if key in api_permissions_dict:
+                        api_permissions_dict[key][user_id] = "y"
+                    else:
+                        api_permissions_dict[key] = {user_id: "y"}
         return api_permissions_dict
 
     @staticmethod
@@ -484,3 +499,47 @@ def async_user_center():
     # 启用线程去同步用户
     executor = ThreadPoolExecutor(max_workers=2)
     executor.submit(sync_user_from_uc)
+
+
+# @deco2(RedisLock("async_feishu_departments_and_users_lock_key"))
+def sync_feishu_departments_and_users():
+    """
+    同步飞书部门和用户到数据库
+    """
+    logging.info("开始同步飞书数据...")
+    fs_app_id = settings.get('fs_app_id')
+    if not fs_app_id:
+        logging.warning("未配置飞书应用ID，跳过同步")
+        return
+    fs_app_secret = settings.get('fs_app_secret')
+    if not fs_app_secret:
+        logging.warning("未配置飞书应用密钥，跳过同步")
+        return
+    try:
+        lark_dept = LarkDepartment(app_id=fs_app_id, app_secret=fs_app_secret)
+        departments = lark_dept.get_all_departments()
+
+        if not departments:
+            logging.warning("未获取到飞书部门数据，跳过同步")
+            return
+
+        logging.info(f"获取到 {len(departments)} 个部门个用户")
+
+
+        # 3. 数据写入
+        success = batch_create_departments(
+            departments=departments,
+            provider='feishu',
+            mark_missing_as_deleted=True
+        )
+
+        logging.info(f"飞书部门同步结果：{success}")
+
+    except Exception as e:
+        logging.error(f"飞书部门同步异常: {e}")
+        raise
+    
+def async_feishu_departments_and_users():
+    # 启用线程去同步飞书部门和用户
+    executor = ThreadPoolExecutor(max_workers=1)
+    executor.submit(sync_feishu_departments_and_users)

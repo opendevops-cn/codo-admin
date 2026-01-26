@@ -158,3 +158,27 @@ class UserToken(Base):
     details = Column('details', String(250), default='')  # 描述、备注
     expire_time = Column(DateTime, nullable=False)  # 过期时间
     create_time = Column(DateTime, nullable=False, default=datetime.now)  # 记录的创建时间
+
+
+class IdpDepartments(TimeBaseModel, Base):
+    __tablename__ = 'codo_a_idp_departments'
+    # identity provider departments table
+    id = Column("id", Integer, primary_key=True, autoincrement=True)
+    provider = Column('provider', String(20), nullable=False, index=True, comment='：feishu/dingtalk/wechatwork')
+    department_id = Column("department_id", String(100), nullable=False, index=True, comment="第三方身份/组织部门id")
+    department_name = Column("department_name", String(200), nullable=False, comment='部门名称')
+    department_users = Column("department_users", JSON(), default=[], comment='部门用户')
+    parent_department_id = Column("parent_department_id", String(100), default="", comment='父部门ID')
+    member_count = Column('member_count', Integer, default=0, comment='部门人数')
+    status = Column('status', String(5), default='0', index=True, comment='状态：0 正常 10 删除')
+
+    __table_args__ = (UniqueConstraint('provider', 'department_id', name="provider_and_department_id"),)
+    
+    
+class RoleIdpDepartments(Base):
+    __tablename__ = 'codo_a_role_idp_departments'
+
+    # 角色与身份提供商部门关联表
+    id = Column('id', Integer, primary_key=True, autoincrement=True)
+    role_id = Column('role_id', Integer, index=True)
+    idp_department_ids = Column('idp_department_ids', JSON(), comment='身份提供商部门ID列表')

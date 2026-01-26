@@ -6,6 +6,7 @@ from mg.handlers.roles_v4_handler import roles_v4_urls
 from mg.handlers.functions_v4_handler import func_v4_urls
 from mg.handlers.menus_v4_handler import menus_v4_urls
 from mg.handlers.apps_v4_handler import apps_urls
+
 # from mg.handlers.business_handler import biz_mg_urls
 from mg.handlers.business_v4_handler import biz_v4_mg_urls
 from mg.handlers.token_v4_handler import token_urls
@@ -14,6 +15,8 @@ from mg.handlers.sys_mg_v4_handler import sys_mg_v4_urls
 from mg.handlers.storage_handler import storage_urls
 from mg.handlers.favorites_v4_handler import favorites_urls
 from mg.handlers.sys_index_handler import index_step_urls
+from mg.handlers.idp_handler import idp_urls
+from mg.handlers.role_idp_department_handler import role_idp_department_urls
 
 urls = []
 urls.extend(user_v4_mg_urls)
@@ -31,3 +34,5 @@ urls.extend(sys_mg_v4_urls)
 urls.extend(storage_urls)
 urls.extend(favorites_urls)
 urls.extend(index_step_urls)
+urls.extend(idp_urls)
+urls.extend(role_idp_department_urls)

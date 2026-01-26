@@ -51,6 +51,8 @@ api_gw = os.getenv('CODO_API_GW', "")  # 网关
 settings_auth_key = os.getenv('CODO_AUTH_KEY', "")  # 服务之间认证token
 oss_data_private = {}  # 上传私有仓库使用
 uc_conf = {}  # 用户中心配置
+fs_app_id = os.getenv('FS_APP_ID', '')
+fs_app_secret = os.getenv('FS_APP_SECRET', '')
 
 try:
     from local_settings import *
@@ -67,6 +69,8 @@ settings = dict(
     max_body_size=max_body_size,
     max_buffer_size=max_buffer_size,
     uc_conf=uc_conf,
+    fs_app_id=fs_app_id,
+    fs_app_secret=fs_app_secret,
     api_gw=api_gw,
     settings_auth_key=settings_auth_key,
     oss_data_private=oss_data_private,
