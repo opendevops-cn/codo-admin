@@ -15,6 +15,7 @@ from websdk2.sqlalchemy_pagination import paginate
 from websdk2.cache_context import cache_conn
 from models.authority import Roles, UserRoles, Users
 from libs.feature_model_utils import CommonOptView
+from services.idp_service import get_users_from_role_idp_departments
 
 opt_obj = CommonOptView(Roles)
 ROLE_USER_INFO_STR = "ROLE_USER_INFO_STR"
@@ -94,6 +95,66 @@ def get_users_for_role(**kwargs) -> dict:
 
     queryset = [dict(zip(dict_list, msg)) for msg in role_info]
     return dict(code=0, msg='获取成功', data=queryset, count=count)
+
+
+# 通过角色查找系统和第三方部门用户
+def get_user_for_role_with_idp_department_user(**kwargs) -> dict:
+    role_id = kwargs.get("role_id")
+    if not role_id:
+        return dict(code=-1, msg="角色ID不能为空")
+    provider = kwargs.get("provider", "feishu")
+    dict_list = ["role_id", "user_id", "username", "nickname", "email", "source"]
+    with DBContext("r") as session:
+        count = session.query(UserRoles).filter(UserRoles.role_id == role_id).count()
+        role_info = (
+            session.query(
+                UserRoles.role_id,
+                UserRoles.user_id,
+                Users.username,
+                Users.nickname,
+                Users.email,
+                Users.source,
+            )
+            .outerjoin(Users, Users.id == UserRoles.user_id)
+            .filter(UserRoles.role_id == role_id, Users.status == "0")
+            .order_by(UserRoles.role_id)
+            .all()
+        )
+
+        queryset = [dict(zip(dict_list, msg)) for msg in role_info]
+
+        # 获取IDP部门用户并合并到结果中
+        idp_user_ids = get_users_from_role_idp_departments(role_id, provider=provider, session=session)
+        if idp_user_ids:
+            system_user_ids = {msg[1] for msg in role_info}
+            unique_idp_user_ids = [uid for uid in idp_user_ids if uid not in system_user_ids]
+
+            if unique_idp_user_ids:
+                idp_users = (
+                    session.query(
+                        Users.id,
+                        Users.username,
+                        Users.nickname,
+                        Users.email,
+                        Users.source,
+                    )
+                    .filter(Users.id.in_(unique_idp_user_ids), Users.status == "0")
+                    .all()
+                )
+
+                for user in idp_users:
+                    queryset.append(
+                        {
+                            "role_id": int(role_id),
+                            "user_id": user[0],
+                            "username": user[1],
+                            "nickname": user[2],
+                            "email": user[3],
+                            "source": user[4],
+                        }
+                    )
+
+    return dict(code=0, msg="获取成功", data=queryset, count=count)
 
 
 def get_all_user_list_for_role(**kwargs) -> tuple:
