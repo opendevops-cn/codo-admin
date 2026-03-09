@@ -205,7 +205,7 @@ class AuthorizationHandler(BaseHandler, ABC):
             ###
             # 1 获取用户
             __user = (
-                session.query(Users.avatar)
+                session.query(Users.avatar, Users.fs_id)
                 .filter(Users.id == self.request_user_id)
                 .first()
             )
