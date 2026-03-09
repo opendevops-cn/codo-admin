@@ -206,7 +206,7 @@ class AuthorizationHandler(BaseHandler, ABC):
             # 1 获取用户
             __user = (
                 session.query(Users.avatar)
-                .filter(Users.id == self.request.user_id)
+                .filter(Users.id == self.request_user_id)
                 .first()
             )
             # if not __user: return self.write(dict(code=-2, msg='当前账户状态错误'))
