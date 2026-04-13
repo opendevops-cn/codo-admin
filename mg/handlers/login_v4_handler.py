@@ -223,19 +223,22 @@ class AuthorizationHandler(BaseHandler, ABC):
                 # 3 获取用户角色
                 __role = session.query(Roles).outerjoin(UserRoles, UserRoles.role_id == Roles.id).filter(
                     UserRoles.user_id == self.request_user_id).all()
-                
-                # 4 如果没有角色，从飞书部门获取
-                if not __role and __user and __user.fs_id:
-                    role_ids = get_user_role_ids_from_idp_departments(
+
+                # 4 同时从飞书部门获取角色，并与直接绑定的角色合并去重
+                if __user and __user.fs_id:
+                    role_ids_from_idp = get_user_role_ids_from_idp_departments(
                         session=session, user_fs_id=__user.fs_id
                     )
 
-                    if role_ids:
-                        __role = (
-                            session.query(Roles)
-                            .filter(Roles.id.in_(role_ids))
-                            .all()
-                        )
+                    if role_ids_from_idp:
+                        existing_role_ids = {r.id for r in __role}
+                        new_role_ids = set(role_ids_from_idp) - existing_role_ids
+                        if new_role_ids:
+                            __role = list(__role) + (
+                                session.query(Roles)
+                                .filter(Roles.id.in_(new_role_ids))
+                                .all()
+                            )
 
                 # 5 构建角色ID集合
                 _role_list = []
