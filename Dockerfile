@@ -12,7 +12,7 @@ RUN yum install -y python3 python3-pip git && \
 
 # 升级 pip 并安装 codo_sdk
 RUN python3 -m pip install --upgrade pip && \
-    pip install -U git+https://github.com/ss1917/ops_sdk.git
+    pip install -U git+https://github.com/ss1917/ops_sdk.git@ea34a6e30630709b20623d08450c8b65c0c92d88
 
 # 设置环境变量
 ARG SERVICE_NAME
