@@ -15,7 +15,7 @@ from tornado.concurrent import run_on_executor
 from sqlalchemy.exc import IntegrityError
 from libs.base_handler import BaseHandler
 from websdk2.db_context import DBContextV2 as DBContext
-from services.role_service import get_role_list_for_api, get_normal_role_list_for_api, get_base_role_list_for_api, \
+from services.role_service import get_role_list_for_api, get_normal_role_list_for_api, get_base_role_list_for_api, get_user_for_role_with_idp_department_user, \
     opt_obj, get_users_for_role, get_all_user_list_for_role, role_sync_all
 from models.authority import Roles, UserRoles, RolesComponents, RoleMenus, RoleApps
 
@@ -86,7 +86,11 @@ class RoleUserHandler(BaseHandler, ABC):
 
     def get(self, *args, **kwargs):
         role_id = self.get_argument('role_id', default=None, strip=True)
-        res = get_users_for_role(role_id=role_id)
+        with_idp = self.get_argument("with_idp", default="no", strip=True)
+        if with_idp in ['yes', 'true', '1']:
+            res = get_user_for_role_with_idp_department_user(role_id=role_id)
+        else:
+            res = get_users_for_role(role_id=role_id)
 
         return self.write(res)
 

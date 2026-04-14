@@ -27,6 +27,7 @@ from websdk2.ldap import LdapApi
 from services.sys_service import get_sys_conf_dict_for_me
 from libs.login_by_feishu import FeiShuAuth, with_protocol_feishu
 from libs.login_by_other import OtherAuthV3
+from services.role_idp_department_service import get_user_role_ids_from_idp_departments
 
 
 class LoginHandler(RequestHandler, ABC):
@@ -201,37 +202,66 @@ class AuthorizationHandler(BaseHandler, ABC):
         page_data, component_data, avatar = {'all': False}, {'all': False}, ''
 
         with DBContext('r') as session:
+            ###
+            # 1 获取用户
+            __user = (
+                session.query(Users.avatar, Users.fs_id)
+                .filter(Users.id == self.request_user_id)
+                .first()
+            )
+            # if not __user: return self.write(dict(code=-2, msg='当前账户状态错误'))
+            if __user:
+                avatar = __user[0]
+
+            # 2 超级管理员
             if self.request_is_superuser:
                 components_info = session.query(Components.name).all()
                 page_data['all'] = True
                 for msg in components_info: component_data[msg[0]] = True
 
             else:
+                # 3 获取用户角色
                 __role = session.query(Roles).outerjoin(UserRoles, UserRoles.role_id == Roles.id).filter(
                     UserRoles.user_id == self.request_user_id).all()
 
-                _role_list = []
-                if __role:
-                    for role in __role:
-                        _role_list.append(role.id)
-                        if role.role_subs:
-                            _role_list.extend(role.role_subs)
+                # 4 同时从飞书部门获取角色，并与直接绑定的角色合并去重
+                if __user and __user.fs_id:
+                    role_ids_from_idp = get_user_role_ids_from_idp_departments(
+                        session=session, user_fs_id=__user.fs_id
+                    )
 
-                    _role_list = set(_role_list)
-                    # print(_role_list)
+                    if role_ids_from_idp:
+                        existing_role_ids = {r.id for r in __role}
+                        new_role_ids = set(role_ids_from_idp) - existing_role_ids
+                        if new_role_ids:
+                            __role = list(__role) + (
+                                session.query(Roles)
+                                .filter(Roles.id.in_(new_role_ids))
+                                .all()
+                            )
+
+                # 5 构建角色ID集合
+                _role_list = []
+                for role in __role:
+                    _role_list.append(role.id)
+                    if role.role_subs:
+                        _role_list.extend(role.role_subs)
+
+                _role_list = set(_role_list)
+
+                # print(_role_list)
+                if _role_list:
+                    # 6 查询菜单
                     __menus = session.query(Menus.menu_name).outerjoin(RoleMenus, Menus.id == RoleMenus.menu_id).filter(
                         RoleMenus.role_id.in_(_role_list)).all()
-
+                    
+                    # 7 查询组件
                     __component = session.query(Components.name).outerjoin(RolesComponents,
                                                                            Components.id == RolesComponents.comp_id).filter(
                         RolesComponents.role_id.in_(_role_list)).all()
                     for p in __menus: page_data[p[0]] = True
                     for c in __component: component_data[c[0]] = True
 
-            ###
-            __user = session.query(Users.avatar).filter(Users.id == self.request_user_id).first()
-            # if not __user: return self.write(dict(code=-2, msg='当前账户状态错误'))
-            if __user: avatar = __user[0]
         # logger.error(f"{page_data}, {self.request_username},{self.request_user_id} super {self.request_is_superuser}")
         data = dict(rules=dict(page=page_data, component=component_data), username=self.request_username,
                     nickname=self.request_nickname, avatar=avatar)

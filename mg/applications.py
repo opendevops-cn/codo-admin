@@ -11,7 +11,7 @@ from abc import ABC
 from tornado.ioloop import PeriodicCallback
 from websdk2.application import Application as myApplication
 
-from libs.sync_user_verift_v4 import async_archive_old_logs, async_user_center, async_api_permission_v4
+from libs.sync_user_verift_v4 import async_archive_old_logs, async_user_center, async_api_permission_v4, async_feishu_departments_and_users
 from mg.handlers import urls
 from mg.subscribe import RedisSubscriber as SubApp
 
@@ -29,6 +29,10 @@ class Application(myApplication, ABC):
         # 同步权限
         check_callback_permission = PeriodicCallback(async_api_permission_v4, 300000)  # 300000 五分钟
         check_callback_permission.start()
+        
+        # 同步飞书部门和用户
+        feishu_syncer = PeriodicCallback(async_feishu_departments_and_users, 3600000)  # 3600000  一个小时
+        feishu_syncer.start()
         super(Application, self).__init__(urls, **settings)
         self.sub_app = SubApp(**settings)
 
