@@ -501,7 +501,7 @@ def async_user_center():
     executor.submit(sync_user_from_uc)
 
 
-# @deco2(RedisLock("async_feishu_departments_and_users_lock_key"))
+@deco2(RedisLock("async_feishu_departments_and_users_lock_key"))
 def sync_feishu_departments_and_users():
     """
     同步飞书部门和用户到数据库
