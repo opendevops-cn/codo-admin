@@ -34,6 +34,58 @@ def _get_biz_value(value: str = None):
     )
 
 
+def validate_biz_parent(parent_id, self_id=None) -> tuple:
+    """
+    校验 biz 父子关系约束。业务层级最多两级:
+      - parent_id == 0 表示 root 业务, 直接放行
+      - parent_id != 0 时, 父业务必须存在, 且其自身 parent_id 必须为 0 (即父必须是 root 业务)
+      - 不能将自身设为自身的父业务
+      - 当前业务若已有子业务, 则不能再挂到其他业务下 (避免出现三级)
+    返回 (ok: bool, msg: str)
+    """
+    try:
+        parent_id = int(parent_id or 0)
+    except (TypeError, ValueError):
+        return False, '父业务ID必须为整数'
+
+    if parent_id == 0:
+        # 切回 root 业务时, 若自身已有子业务同样不允许 (root 仍可被挂载, 这里不阻止)
+        return True, ''
+
+    sid = None
+    try:
+        sid = int(self_id) if self_id is not None else None
+    except (TypeError, ValueError):
+        sid = None
+
+    with DBContext('r') as session:
+        parent = session.query(BizModel).filter(BizModel.id == parent_id).first()
+        if not parent:
+            return False, f'父业务不存在, id={parent_id}'
+        if parent.parent_id != 0:
+            return False, f'父业务必须是 root 业务, id={parent_id} 不是根业务'
+        if sid is not None and parent.id == sid:
+            return False, '不能将自身设为父业务'
+        if sid is not None:
+            has_child = session.query(BizModel).filter(BizModel.parent_id == sid).first()
+            if has_child:
+                return False, '该业务下已有子业务, 不能再挂载到其他业务下'
+
+    return True, ''
+
+
+def get_root_biz_list(**params) -> dict:
+    # 列出所有 root 业务 (parent_id == 0), 供前端选择父业务使用
+    with DBContext('r') as session:
+        queryset = session.query(BizModel).filter(
+            BizModel.parent_id == 0, BizModel.life_cycle != '停运'
+        ).order_by(BizModel.sort).all()
+        data = [dict(id=b.id, biz_id=b.biz_id, biz_cn_name=b.biz_cn_name, biz_en_name=b.biz_en_name)
+                for b in queryset]
+    return dict(msg='获取成功', code=0, count=len(data), data=data)
+
+
+
 def get_biz_list_for_api(**params) -> dict:
     value = params.get('searchValue') if "searchValue" in params else params.get('searchVal')
 
