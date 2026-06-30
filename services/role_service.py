@@ -160,11 +160,35 @@ def get_user_for_role_with_idp_department_user(**kwargs) -> dict:
 def get_all_user_list_for_role(**kwargs) -> tuple:
     role_user_dict = dict()
     role_id_user_dict = dict()
+    provider = kwargs.get("provider", "feishu")
     with DBContext('r') as session:
         role_info = session.query(Roles.id, Roles.role_name, Users.username, Users.nickname, Users.id).outerjoin(
             UserRoles, UserRoles.role_id == Roles.id).outerjoin(
             Users, Users.id == UserRoles.user_id).filter(Roles.role_type == 'normal', Roles.status == '0',
                                                          Users.status == '0').all()
+
+        # role_id -> role_name 映射，以及每个角色已通过 UserRoles 绑定的系统用户ID
+        role_name_map = dict()
+        role_system_user_ids = dict()
+        for msg_tuple in role_info:
+            role_id = msg_tuple[0]
+            role_name_map[role_id] = msg_tuple[1]
+            if msg_tuple[4]:
+                role_system_user_ids.setdefault(role_id, set()).add(msg_tuple[4])
+
+        # 获取每个角色绑定的 IDP 部门用户（含子部门），去重后查询用户信息
+        role_idp_users = dict()
+        for role_id in role_name_map:
+            idp_user_ids = get_users_from_role_idp_departments(role_id, provider=provider, session=session)
+            if not idp_user_ids:
+                continue
+            unique_idp_user_ids = [uid for uid in idp_user_ids
+                                   if uid not in role_system_user_ids.get(role_id, set())]
+            if not unique_idp_user_ids:
+                continue
+            idp_users = session.query(Users.id, Users.username, Users.nickname).filter(
+                Users.id.in_(unique_idp_user_ids), Users.status == '0').all()
+            role_idp_users[role_id] = idp_users
 
     for msg_tuple in role_info:
         role_id = msg_tuple[0]
@@ -183,8 +207,30 @@ def get_all_user_list_for_role(**kwargs) -> tuple:
             role_id_user_dict[role_id] = {**val_dict2, **{user_id: "y"}}
         else:
             role_id_user_dict[role_id] = {user_id: "y"}
-        redis_conn = cache_conn()
-        redis_conn.set(ROLE_USER_INFO_STR, json.dumps(role_id_user_dict))
+
+    # 合并 IDP 部门用户
+    for role_id, idp_users in role_idp_users.items():
+        role_name = role_name_map.get(role_id)
+        if not role_name:
+            continue
+        for user in idp_users:
+            user_id = user[0]
+            username = user[1]
+            nickname = user[2]
+            val_dict = role_user_dict.get(role_name)
+            if val_dict and isinstance(val_dict, dict):
+                role_user_dict[role_name] = {**val_dict, **{f"{username}({nickname})": "y"}}
+            else:
+                role_user_dict[role_name] = {f"{username}({nickname})": "y"}
+
+            val_dict2 = role_id_user_dict.get(role_id)
+            if val_dict2 and isinstance(val_dict2, dict):
+                role_id_user_dict[role_id] = {**val_dict2, **{user_id: "y"}}
+            else:
+                role_id_user_dict[role_id] = {user_id: "y"}
+
+    redis_conn = cache_conn()
+    redis_conn.set(ROLE_USER_INFO_STR, json.dumps(role_id_user_dict))
     return role_user_dict, role_id_user_dict
 
 
