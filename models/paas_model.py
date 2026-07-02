@@ -67,6 +67,9 @@ class BizModel(TimeBaseModel, Base):
     biz_en_name = Column('biz_en_name', String(50), unique=True)  # 业务英文命
     biz_cn_name = Column('biz_cn_name', String(50), index=True, default='')  # 业务中文名
 
+    # 父业务ID, 0 表示 root 业务。约束: 子业务的父必须是 root 业务, 业务层级最多两级
+    parent_id = Column('parent_id', Integer, default=0, index=True, comment='父业务ID, 0为root业务')
+
     maintainer = Column('maintainer', JSON(), comment='管理员')
     biz_sre = Column('biz_sre', JSON(), comment='运维人员')
     biz_developer = Column('biz_developer', JSON(), comment='开发人员')

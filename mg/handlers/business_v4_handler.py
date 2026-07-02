@@ -16,7 +16,7 @@ from libs.base_handler import BaseHandler
 from websdk2.db_context import DBContextV2 as DBContext
 from models.paas_model import BizModel
 from services.biz_service import opt_obj, get_biz_list_for_api, get_biz_list_v3, sync_biz_role_user, get_biz_map, \
-    switch_business, get_biz_list_v4
+    switch_business, get_biz_list_v4, validate_biz_parent, get_root_biz_list
 
 
 class BusinessHandler(BaseHandler, ABC):
@@ -29,6 +29,10 @@ class BusinessHandler(BaseHandler, ABC):
     def post(self):
         # TODO  用户处理
         data = json.loads(self.request.body.decode("utf-8"))
+        # 父子关系强约束校验
+        ok, msg = validate_biz_parent(data.get('parent_id'))
+        if not ok:
+            return self.write(dict(code=-1, msg=msg))
         data['maintainer'] = dict(role=data.get('maintainer'))
         data['biz_sre'] = dict(role=data.get('biz_sre'))
         data['biz_developer'] = dict(role=data.get('biz_developer'))
@@ -42,6 +46,10 @@ class BusinessHandler(BaseHandler, ABC):
     def put(self):
         # TODO  用户处理
         data = json.loads(self.request.body.decode("utf-8"))
+        # 父子关系强约束校验
+        ok, msg = validate_biz_parent(data.get('parent_id'), self_id=data.get('id'))
+        if not ok:
+            return self.write(dict(code=-1, msg=msg))
         if 'tenant' in data:
             del data['tenant']
         if 'ext_info' in data:
@@ -141,8 +149,16 @@ class BizChangeNaHandler(BaseHandler, ABC):
         return self.write(res)
 
 
+class BizRootListHandler(BaseHandler, ABC):
+    # 列出 root 业务 (parent_id == 0), 用于前端选择父业务
+    def get(self):
+        res = get_root_biz_list()
+        self.write(res)
+
+
 biz_v4_mg_urls = [
     (r"/v4/biz/", BusinessHandler, {"handle_name": "权限中心-业务管理", "method": ["ALL"]}),
+    (r"/v4/biz/root-list/", BizRootListHandler, {"handle_name": "权限中心-业务管理", "method": ["GET"]}),
     (r"/v4/biz/list/", BusinessListHandler, {"handle_name": "PAAS-基础功能-查看业务列表和切换", "method": ["GET"]}),
     (r"/v4/na/biz/list/", BizListNaHandler),  # 免认证查看业务列表
     (r"/v4/na/biz/change/", BizChangeNaHandler)   # 免认证切换业务
