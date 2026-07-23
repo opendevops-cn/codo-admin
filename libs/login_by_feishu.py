@@ -36,21 +36,58 @@ class FeiShuAuth:
         access_token = self.get_access_token()
         res = self.get_feishu_user(access_token)
         if not res or 'user_id' not in res: return None
-        with DBContext('r') as session:
+
+        with DBContext('w') as session:
             user_info = session.query(Users).filter(Users.fs_id == res.get('user_id'),
                                                     Users.status != '10').first()
 
-        self.redis_conn.set(f"feishu_login_cache___{self.code}", res.get('user_id'), ex=180)
+            if not user_info:
+                fs_email = res.get('email', '')
+                if fs_email:
+                    user_info = session.query(Users).filter(
+                        Users.email == fs_email,
+                        Users.status != '10'
+                    ).first()
+                    if user_info:
+                        # 补录 fs_id，恢复主登录通道
+                        user_info.fs_id = res.get('user_id')
+                        user_info.fs_open_id = res.get('open_id', user_info.fs_open_id or '')
+                        session.commit()
+
+        self.redis_conn.set(f"feishu_login_cache___{self.code}", json.dumps(res), ex=180)
         return user_info
 
     def get_cache_info(self):
-        fs_id = self.redis_conn.get(f"feishu_login_cache___{self.code}")
-        if fs_id:
-            with DBContext('r') as session:
-                user_info = session.query(Users).filter(Users.fs_id == fs_id, Users.status != '10').first()
-            return user_info
-        else:
+        cached = self.redis_conn.get(f"feishu_login_cache___{self.code}")
+        if not cached:
             return None
+
+        try:
+            res = json.loads(cached)
+        except (TypeError, json.JSONDecodeError):
+            # 兼容旧缓存（只存了 fs_id 字符串）
+            res = {'user_id': cached}
+
+        fs_id = res.get('user_id')
+        if not fs_id:
+            return None
+
+        with DBContext('w') as session:
+            user_info = session.query(Users).filter(Users.fs_id == fs_id, Users.status != '10').first()
+
+            if not user_info:
+                fs_email = res.get('email', '')
+                if fs_email:
+                    user_info = session.query(Users).filter(
+                        Users.email == fs_email,
+                        Users.status != '10'
+                    ).first()
+                    if user_info:
+                        user_info.fs_id = fs_id
+                        user_info.fs_open_id = res.get('open_id', user_info.fs_open_id or '')
+                        session.commit()
+
+        return user_info
 
     def test_feishu(self):
         # 发送测试信息
