@@ -85,6 +85,7 @@ class FeiShuAuth:
         """
         与 v6 相同链路（URL 写死本文件）:
           tenant_access_token -> oidc/access_token -> user_info
+        返回的 dict 额外带 _user_access_token，供后续用用户身份拉通讯录补手机号。
         """
         tenant_token = self._get_tenant_access_token()
         if not tenant_token:
@@ -105,7 +106,8 @@ class FeiShuAuth:
                 logger.warning(f"[FeiShu] Open API 换 user access_token 失败: {token_data}")
                 return None
 
-            user_access_token = (token_data.get('data') or {}).get('access_token')
+            token_payload = token_data.get('data') or {}
+            user_access_token = token_payload.get('access_token')
             if not user_access_token:
                 logger.warning(f"[FeiShu] Open API 响应无 access_token: {token_data}")
                 return None
@@ -120,57 +122,88 @@ class FeiShuAuth:
                 logger.warning(f"[FeiShu] Open API 获取 user_info 失败: {info_data}")
                 return None
 
-            return info_data.get('data') or {}
+            res = dict(info_data.get('data') or {})
+            # 内部字段：用于补手机号，不要当业务字段写库
+            res['_user_access_token'] = user_access_token
+            # 部分租户在 token 接口 data 里直接带 mobile（少见，有则用）
+            for k in ('mobile', 'email', 'enterprise_email'):
+                if not res.get(k) and token_payload.get(k):
+                    res[k] = token_payload.get(k)
+            return res
         except Exception as err:
             logger.warning(f"[FeiShu] Open API 获取用户信息异常: {err}")
             return None
 
-    def _get_contact_user(self, user_id: str, user_id_type: str = 'user_id'):
+    def _get_contact_user(self, user_id: str, user_id_type: str = 'user_id',
+                          user_access_token: str = None):
         """
         通讯录查用户详情（写死 URL），用于补 email/mobile/avatar。
-        手机号需应用具备通讯录手机号读权限，否则接口成功也可能无 mobile 字段。
+        优先用 OIDC user_access_token（用户本人授权，更容易拿到自己的手机号）；
+        失败再回退 tenant_access_token（需应用通讯录手机号权限）。
         """
-        tenant_token = self._get_tenant_access_token()
-        if not tenant_token or not user_id:
+        if not user_id:
             return None
 
         url = FEISHU_CONTACT_USER_URL.format(user_id=user_id)
-        try:
-            resp = requests.get(
-                url,
-                headers={'Authorization': f'Bearer {tenant_token}'},
-                params={
-                    'user_id_type': user_id_type,
-                    # 显式要手机号相关字段（无权限时飞书仍可能不返回）
-                    'department_id_type': 'open_department_id',
-                },
-                timeout=10,
-            )
-            data = resp.json()
-            if data.get('code') == 0:
-                user = (data.get('data') or {}).get('user') or {}
-                logger.info(
-                    f"[FeiShu] 通讯录查询成功 id_type={user_id_type}, "
-                    f"keys={list(user.keys())}, has_mobile={bool(user.get('mobile'))}"
+        tokens = []
+        if user_access_token:
+            tokens.append(('user', user_access_token))
+        tenant_token = self._get_tenant_access_token()
+        if tenant_token:
+            tokens.append(('tenant', tenant_token))
+
+        for token_kind, token in tokens:
+            try:
+                resp = requests.get(
+                    url,
+                    headers={'Authorization': f'Bearer {token}'},
+                    params={
+                        'user_id_type': user_id_type,
+                        'department_id_type': 'open_department_id',
+                    },
+                    timeout=10,
                 )
-                return user
-            logger.warning(f"[FeiShu] 通讯录查询失败 id_type={user_id_type}: {data}")
-        except Exception as err:
-            logger.warning(f"[FeiShu] 通讯录查询异常 id_type={user_id_type}: {err}")
+                data = resp.json()
+                if data.get('code') == 0:
+                    user = (data.get('data') or {}).get('user') or {}
+                    logger.info(
+                        f"[FeiShu] 通讯录查询成功 token={token_kind}, "
+                        f"id_type={user_id_type}, keys={list(user.keys())}, "
+                        f"has_mobile={bool(user.get('mobile'))}"
+                    )
+                    if user.get('mobile') or token_kind == 'tenant' or len(tokens) == 1:
+                        return user
+                    # user token 成功但无 mobile，继续试 tenant
+                    continue
+                logger.warning(
+                    f"[FeiShu] 通讯录查询失败 token={token_kind}, "
+                    f"id_type={user_id_type}: {data}"
+                )
+            except Exception as err:
+                logger.warning(
+                    f"[FeiShu] 通讯录查询异常 token={token_kind}, "
+                    f"id_type={user_id_type}: {err}"
+                )
         return None
 
     def fetch_user_info(self):
         """
         获取飞书用户信息。
         优先 Open API（写死 URL）；失败再回退 Passport userinfo。
+        拿到身份后立刻尝试补手机号（user_access_token + 通讯录）。
         """
+        res = None
         # 1) Open API（与 v6 相同接口）
         if self.code:
             res = self._get_user_info_by_open_api(self.code)
             if res and (res.get('user_id') or res.get('open_id')):
                 logger.info(
-                    f"[FeiShu] Open API 获取用户信息成功: keys={list(res.keys())}"
+                    f"[FeiShu] Open API 获取用户信息成功: keys={list(res.keys())}, "
+                    f"has_mobile={bool(self._extract_mobile(res))}"
                 )
+                # 登录 user_info 通常无 mobile，立即用 user_access_token 补全
+                if not self._extract_mobile(res):
+                    self._enrich_profile_from_contact(res)
                 return res
             logger.warning(f"[FeiShu] Open API 未返回有效用户: res={res}")
 
@@ -185,6 +218,8 @@ class FeiShuAuth:
             logger.info(
                 f"[FeiShu] Passport 获取用户信息成功: keys={list(res.keys())}"
             )
+            if not self._extract_mobile(res):
+                self._enrich_profile_from_contact(res)
             return res
         logger.warning(f"[FeiShu] Passport 获取用户信息失败: res={res}")
         return None
@@ -305,17 +340,31 @@ class FeiShuAuth:
         detail = None
         fs_id = res.get('user_id')
         open_id = res.get('open_id')
+        user_at = res.get('_user_access_token') or None
         if fs_id:
-            detail = self._get_contact_user(fs_id, user_id_type='user_id')
-        if not detail and open_id:
-            detail = self._get_contact_user(open_id, user_id_type='open_id')
+            detail = self._get_contact_user(
+                fs_id, user_id_type='user_id', user_access_token=user_at,
+            )
+        if (not detail or (need_mobile and not self._extract_mobile(detail))) and open_id:
+            detail2 = self._get_contact_user(
+                open_id, user_id_type='open_id', user_access_token=user_at,
+            )
+            if detail2:
+                # 合并：后取的补前取没有的字段
+                if not detail:
+                    detail = detail2
+                else:
+                    for k, v in detail2.items():
+                        if v and not detail.get(k):
+                            detail[k] = v
 
         if not detail:
             if need_email or need_mobile:
                 logger.warning(
                     f"[FeiShu] 通讯录未能补全资料: user_id={res.get('user_id')}, "
                     f"open_id={res.get('open_id')}, "
-                    f"need_email={need_email}, need_mobile={need_mobile}"
+                    f"need_email={need_email}, need_mobile={need_mobile}, "
+                    f"has_user_token={bool(user_at)}"
                 )
             return
 
@@ -337,9 +386,10 @@ class FeiShuAuth:
                 res['mobile'] = mobile
                 logger.info(f"[FeiShu] 通讯录补手机成功: mobile={mobile}")
             else:
-                # 便于排查权限：通讯录成功但无 mobile（常见缺 contact:user.phone 权限）
+                # 便于排查权限：通讯录成功但无 mobile（常见缺手机号权限）
                 logger.warning(
-                    f"[FeiShu] 通讯录未返回手机号: user_keys={list(detail.keys())}"
+                    f"[FeiShu] 通讯录未返回手机号: user_keys={list(detail.keys())}。"
+                    f"请确认飞书应用已开通「获取用户手机号」并发布授权。"
                 )
 
         if need_avatar:
@@ -471,8 +521,8 @@ class FeiShuAuth:
             username=username,
             nickname=nickname,
             email=fs_email,
-            tel=tel,
-            avatar=avatar,
+            tel=tel or '',
+            avatar=avatar or '',
             fs_id=fs_id,
             fs_open_id=open_id,
             password=gen_md5(plain_password),
@@ -483,9 +533,14 @@ class FeiShuAuth:
         )
         session.add(user)
         session.commit()
+        if not tel:
+            logger.warning(
+                f"[FeiShu] 自动注册时未拿到手机号: username={username}, "
+                f"email={fs_email}, fs_id={fs_id}, res_keys={list(res.keys())}"
+            )
         logger.info(
             f"[FeiShu] 自动注册用户成功: username={username}, email={fs_email}, "
-            f"fs_id={fs_id}, tel={bool(tel)}, avatar={bool(avatar)}"
+            f"fs_id={fs_id}, tel={tel or ''}, avatar={bool(avatar)}"
         )
 
         # 发信失败不阻断登录
@@ -591,7 +646,16 @@ class FeiShuAuth:
             user_info = self._resolve_user(session, res)
             user_info = self._detach_user(session, user_info)
 
-        self.redis_conn.set(f"feishu_login_cache___{self.code}", json.dumps(res), ex=180)
+        # 缓存勿写入内部 token 字段
+        cache_payload = {
+            k: v for k, v in res.items()
+            if not str(k).startswith('_')
+        }
+        self.redis_conn.set(
+            f"feishu_login_cache___{self.code}",
+            json.dumps(cache_payload, ensure_ascii=False),
+            ex=180,
+        )
         return user_info
 
     def get_cache_info(self):

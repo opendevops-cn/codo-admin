@@ -91,7 +91,14 @@ async def feishu_verify(**kwargs) -> Optional[Users]:
 
 
 async def dingtalk_verify(**kwargs) -> Optional[Users]:
-    return DingTalkAuth(**kwargs)()
+    # V5 钉钉登录：与飞书一致，允许自动注册；业务错误通过 last_error 返回
+    kwargs = dict(kwargs)
+    kwargs.setdefault('allow_auto_register', True)
+    auth = DingTalkAuth(**kwargs)
+    user = auth()
+    if user is None and getattr(auth, 'last_error', None):
+        return auth.last_error
+    return user
 
 
 async def wechatwork_verify(**kwargs) -> Optional[Users]:
