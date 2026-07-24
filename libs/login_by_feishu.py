@@ -4,7 +4,11 @@
 Contact : 191715030@qq.com
 Author  : shenshuo
 Date    : 2023/6/10 15:14
-Desc    : 飞书登录验证
+Desc    : 飞书登录验证（v4/v5）
+
+用户信息获取优先走与 v6 相同的 Open API：
+  tenant_access_token -> authen/v1/oidc/access_token -> authen/v1/user_info
+失败时回退旧 Passport OAuth，兼容仍走 passport 授权的前端。
 """
 import json
 import urllib.parse
@@ -24,10 +28,68 @@ feishu_auth
 
 class FeiShuAuth:
     def __init__(self, **kwargs):
-        self.__fs_conf = kwargs.get('fs_conf')
+        self.__fs_conf = kwargs.get('fs_conf') or {}
         self.code = kwargs.get('code')
         self.fs_redirect_uri = kwargs.get('fs_redirect_uri')
         self.redis_conn = cache_conn()
+        # Open API 客户端（与 v6 共用 libs.auth_utils.feishu.FeiShuAuth）
+        self._open_auth = None
+
+    def _get_app_credentials(self):
+        conf = self.__fs_conf or {}
+        app_id = conf.get('feishu_client_id') or conf.get('feishu_app_id')
+        app_secret = conf.get('feishu_client_secret') or conf.get('feishu_app_secret')
+        return app_id, app_secret
+
+    def _get_open_auth(self):
+        """懒加载 v6 同款 Open API 客户端。"""
+        if self._open_auth is not None:
+            return self._open_auth
+        app_id, app_secret = self._get_app_credentials()
+        if not app_id or not app_secret:
+            logger.warning("[FeiShu] 缺少 client_id/client_secret，无法使用 Open API")
+            return None
+        from libs.auth_utils.feishu import FeiShuAuth as OpenFeiShuAuth
+        self._open_auth = OpenFeiShuAuth(app_id=app_id, app_secret=app_secret)
+        return self._open_auth
+
+    def fetch_user_info(self):
+        """
+        获取飞书用户信息。
+        优先 v6 Open API；失败再回退 Passport userinfo。
+        返回 dict，至少应含 user_id 或 open_id。
+        """
+        # 1) v6 同款：Open API OIDC
+        open_auth = self._get_open_auth()
+        if open_auth and self.code:
+            try:
+                res = open_auth.get_user_info_by_code(self.code)
+                if res and (res.get('user_id') or res.get('open_id')):
+                    logger.info(
+                        f"[FeiShu] Open API 获取用户信息成功: "
+                        f"keys={list(res.keys())}"
+                    )
+                    return res
+                logger.warning(
+                    f"[FeiShu] Open API 未返回有效用户: res={res}"
+                )
+            except Exception as err:
+                logger.warning(f"[FeiShu] Open API 获取用户信息异常: {err}")
+
+        # 2) 回退旧 Passport（前端仍可能走 passport 授权拿 code）
+        logger.warning("[FeiShu] 回退 Passport OAuth 获取用户信息")
+        access_token = self.get_access_token()
+        if not access_token:
+            logger.warning("[FeiShu] Passport 获取 access_token 失败")
+            return None
+        res = self.get_feishu_user(access_token)
+        if res and (res.get('user_id') or res.get('open_id')):
+            logger.info(
+                f"[FeiShu] Passport 获取用户信息成功: keys={list(res.keys())}"
+            )
+            return res
+        logger.warning(f"[FeiShu] Passport 获取用户信息失败: res={res}")
+        return None
 
     @staticmethod
     def _decode_cached(cached):
@@ -39,15 +101,54 @@ class FeiShuAuth:
     @staticmethod
     def _extract_email(res: dict) -> str:
         """飞书可能返回 email 或 enterprise_email。"""
+        if not isinstance(res, dict):
+            return ''
         raw = res.get('email') or res.get('enterprise_email') or ''
         if isinstance(raw, bytes):
             raw = raw.decode('utf-8')
         return str(raw).strip()
 
+    def _enrich_email_from_contact(self, res: dict) -> None:
+        """
+        user_info 无 email 时，用通讯录补全。
+        优先复用 v6 Open API 客户端的 get_user_detail。
+        """
+        if not isinstance(res, dict) or self._extract_email(res):
+            return
+
+        open_auth = self._get_open_auth()
+        detail = None
+        if open_auth:
+            fs_id = res.get('user_id')
+            open_id = res.get('open_id')
+            if fs_id:
+                detail = open_auth.get_user_detail(fs_id, user_id_type='user_id')
+            if not detail and open_id:
+                detail = open_auth.get_user_detail(open_id, user_id_type='open_id')
+
+        if not detail:
+            logger.warning(
+                f"[FeiShu] 通讯录未能补到邮箱: user_id={res.get('user_id')}, "
+                f"open_id={res.get('open_id')}"
+            )
+            return
+
+        email = detail.get('email') or detail.get('enterprise_email') or ''
+        if email:
+            res['email'] = email
+            if detail.get('enterprise_email'):
+                res['enterprise_email'] = detail.get('enterprise_email')
+            logger.info(f"[FeiShu] 通讯录补邮箱成功: email={email}")
+        else:
+            logger.warning(
+                f"[FeiShu] 通讯录用户无邮箱字段: keys={list(detail.keys())}"
+            )
+
     def _bind_user_by_email(self, session, res: dict, fs_id: str):
         """fs_id 未命中时，用邮箱兜底匹配并补录 fs_id。"""
         from sqlalchemy import func
 
+        self._enrich_email_from_contact(res)
         fs_email = self._extract_email(res)
         if not fs_email:
             logger.warning(
@@ -56,7 +157,6 @@ class FeiShuAuth:
             )
             return None
 
-        # 大小写不敏感匹配，兼容 email / enterprise_email 与库内大小写差异
         user_info = session.query(Users).filter(
             func.lower(Users.email) == fs_email.lower(),
             Users.status != '10'
@@ -71,26 +171,55 @@ class FeiShuAuth:
             logger.warning(f"[FeiShu] 邮箱兜底未找到用户: email={fs_email}, fs_id={fs_id}")
         return user_info
 
+    def _resolve_user(self, session, res: dict):
+        """fs_id -> open_id -> email 三级匹配，命中则补录 fs_id。"""
+        fs_id = res.get('user_id') or res.get('open_id')
+        if not fs_id:
+            return None
+
+        user_info = session.query(Users).filter(
+            Users.fs_id == fs_id,
+            Users.status != '10'
+        ).first()
+        if user_info:
+            return user_info
+
+        open_id = res.get('open_id') or ''
+        if open_id:
+            user_info = session.query(Users).filter(
+                Users.fs_open_id == open_id,
+                Users.status != '10'
+            ).first()
+            if user_info:
+                user_info.fs_id = fs_id
+                session.commit()
+                logger.info(
+                    f"[FeiShu] open_id 兜底绑定成功: open_id={open_id}, fs_id={fs_id}"
+                )
+                return user_info
+
+        return self._bind_user_by_email(session, res, fs_id)
+
     def call(self):
         user_info = self.get_cache_info()
-        if user_info: return user_info
+        if user_info:
+            return user_info
 
-        access_token = self.get_access_token()
-        res = self.get_feishu_user(access_token)
-        if not res or 'user_id' not in res:
+        res = self.fetch_user_info()
+        fs_id = (res or {}).get('user_id') or (res or {}).get('open_id')
+        if not res or not fs_id:
             logger.warning(
-                f"[FeiShu] 获取用户信息失败或缺少 user_id: "
+                f"[FeiShu] 获取用户信息失败或缺少 user_id/open_id: "
                 f"res_keys={list(res.keys()) if isinstance(res, dict) else res}"
             )
             return None
 
-        fs_id = res.get('user_id')
-        with DBContext('w') as session:
-            user_info = session.query(Users).filter(Users.fs_id == fs_id,
-                                                    Users.status != '10').first()
+        # 统一写入 user_id，方便缓存与后续匹配
+        if not res.get('user_id') and res.get('open_id'):
+            res['user_id'] = res.get('open_id')
 
-            if not user_info:
-                user_info = self._bind_user_by_email(session, res, fs_id)
+        with DBContext('w') as session:
+            user_info = self._resolve_user(session, res)
 
         self.redis_conn.set(f"feishu_login_cache___{self.code}", json.dumps(res), ex=180)
         return user_info
@@ -109,17 +238,15 @@ class FeiShuAuth:
             # 兼容旧缓存（只存了 fs_id 字符串）
             res = {'user_id': cached}
 
-        fs_id = res.get('user_id')
+        fs_id = res.get('user_id') or res.get('open_id')
         if isinstance(fs_id, bytes):
             fs_id = fs_id.decode('utf-8')
+            res['user_id'] = fs_id
         if not fs_id:
             return None
 
         with DBContext('w') as session:
-            user_info = session.query(Users).filter(Users.fs_id == fs_id, Users.status != '10').first()
-
-            if not user_info:
-                user_info = self._bind_user_by_email(session, res, fs_id)
+            user_info = self._resolve_user(session, res)
 
         return user_info
 
@@ -128,14 +255,14 @@ class FeiShuAuth:
         pass
 
     def get_access_token(self):
-        # 构建请求的 URL
+        """旧 Passport 换 token（回退路径）。"""
         url = self.__fs_conf.get('feishu_access_url')
+        if not url:
+            return None
 
         headers = {
-            'Content-Type': 'application/x-www-form-urlencoded'  # 设置为 JSON 格式
+            'Content-Type': 'application/x-www-form-urlencoded'
         }
-
-        # 构建请求参数
         payload = {
             'client_id': self.__fs_conf.get('feishu_client_id'),
             'client_secret': self.__fs_conf.get('feishu_client_secret'),
@@ -144,56 +271,36 @@ class FeiShuAuth:
             'code': self.code
         }
 
-        # 发送 POST 请求
         response = requests.post(url, headers=headers, data=payload)
-
-        # 解析响应
         if response.status_code == 200:
             try:
                 data = response.json()
                 return data['access_token']
-            except Exception as err:
+            except Exception:
                 return None
-
-        # 验证失败，返回 None 或抛出异常
         return None
 
     def get_feishu_user(self, access_token):
-        # 构建请求的 URL
+        """旧 Passport userinfo（回退路径）。"""
         url = self.__fs_conf.get('feishu_user_info_url')
+        if not url or not access_token:
+            return None
 
         headers = {
-            "Content-Type": "application/json; charset=utf-8",  # 设置为 JSON 格式
+            "Content-Type": "application/json; charset=utf-8",
             "Authorization": f"Bearer {access_token}"
         }
-        # 构建请求参数
-        payload = {
-            'grant_type': 'authorization_code',
-            'code': self.code
-        }
         response = requests.get(url, headers=headers)
-
-        # 解析响应
         if response.status_code == 200:
             try:
                 return response.json()
-            except Exception as err:
-                # print(response.text, err)
+            except Exception:
                 return None
-
-        # 验证失败，返回 None 或抛出异常
         return None
 
     def __call__(self, *args, **kwargs):
         return self.call()
 
-
-# url_dict = dict(
-#     test6667={
-#         "login_url": "http://10.241.0.40:8888/api/p/v4/login/feishu/",
-#         "client_id": 'cli_a270b45f63b9100b'
-#     }
-# )
 
 # https://applink.feishu.cn/client/web_url/open?url=http://10.241.0.40:8888/api/p/v4/m/test6667?order_id=666
 def with_protocol_feishu(url_code, query_params):
