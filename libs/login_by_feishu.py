@@ -215,13 +215,30 @@ class FeiShuAuth:
 
     @staticmethod
     def _extract_mobile(res: dict) -> str:
+        """
+        手机号按字符串取用（飞书一般为 str，如 '+86138...'）。
+        不要读 mobile_visible：那是 bool「是否可见」，不是号码。
+        """
         if not isinstance(res, dict):
             return ''
-        raw = res.get('mobile') or res.get('mobile_visible') or res.get('tel') or ''
-        if isinstance(raw, bytes):
-            raw = raw.decode('utf-8')
-        # 飞书 mobile 常带 +86 前缀，入库前去掉空白
-        return str(raw).strip()
+        # 仅号码字段；显式排除 mobile_visible
+        for key in ('mobile', 'mobile_number', 'tel', 'phone'):
+            raw = res.get(key)
+            # bool 绝不是手机号（曾误把 mobile_visible=True 写成 tel）
+            if isinstance(raw, bool) or raw is None:
+                continue
+            if isinstance(raw, bytes):
+                raw = raw.decode('utf-8')
+            # 正常路径：字符串手机号，strip 后非空即用
+            if isinstance(raw, str):
+                s = raw.strip()
+                if s:
+                    return s
+                continue
+            # 少数接口可能给纯数字
+            if isinstance(raw, int):
+                return str(raw)
+        return ''
 
     @staticmethod
     def _username_from_email(email: str, fs_id: str = '') -> str:
