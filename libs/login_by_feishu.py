@@ -126,7 +126,10 @@ class FeiShuAuth:
             return None
 
     def _get_contact_user(self, user_id: str, user_id_type: str = 'user_id'):
-        """通讯录查用户详情（写死 URL），用于补 email。"""
+        """
+        通讯录查用户详情（写死 URL），用于补 email/mobile/avatar。
+        手机号需应用具备通讯录手机号读权限，否则接口成功也可能无 mobile 字段。
+        """
         tenant_token = self._get_tenant_access_token()
         if not tenant_token or not user_id:
             return None
@@ -136,12 +139,21 @@ class FeiShuAuth:
             resp = requests.get(
                 url,
                 headers={'Authorization': f'Bearer {tenant_token}'},
-                params={'user_id_type': user_id_type},
+                params={
+                    'user_id_type': user_id_type,
+                    # 显式要手机号相关字段（无权限时飞书仍可能不返回）
+                    'department_id_type': 'open_department_id',
+                },
                 timeout=10,
             )
             data = resp.json()
             if data.get('code') == 0:
-                return (data.get('data') or {}).get('user') or {}
+                user = (data.get('data') or {}).get('user') or {}
+                logger.info(
+                    f"[FeiShu] 通讯录查询成功 id_type={user_id_type}, "
+                    f"keys={list(user.keys())}, has_mobile={bool(user.get('mobile'))}"
+                )
+                return user
             logger.warning(f"[FeiShu] 通讯录查询失败 id_type={user_id_type}: {data}")
         except Exception as err:
             logger.warning(f"[FeiShu] 通讯录查询异常 id_type={user_id_type}: {err}")
@@ -299,10 +311,11 @@ class FeiShuAuth:
             detail = self._get_contact_user(open_id, user_id_type='open_id')
 
         if not detail:
-            if need_email:
+            if need_email or need_mobile:
                 logger.warning(
                     f"[FeiShu] 通讯录未能补全资料: user_id={res.get('user_id')}, "
-                    f"open_id={res.get('open_id')}"
+                    f"open_id={res.get('open_id')}, "
+                    f"need_email={need_email}, need_mobile={need_mobile}"
                 )
             return
 
@@ -323,6 +336,11 @@ class FeiShuAuth:
             if mobile:
                 res['mobile'] = mobile
                 logger.info(f"[FeiShu] 通讯录补手机成功: mobile={mobile}")
+            else:
+                # 便于排查权限：通讯录成功但无 mobile（常见缺 contact:user.phone 权限）
+                logger.warning(
+                    f"[FeiShu] 通讯录未返回手机号: user_keys={list(detail.keys())}"
+                )
 
         if need_avatar:
             avatar = self._extract_avatar(detail)
@@ -334,11 +352,47 @@ class FeiShuAuth:
     def _enrich_email_from_contact(self, res: dict) -> None:
         self._enrich_profile_from_contact(res)
 
+    def _backfill_user_profile(self, session, user_info, res: dict) -> bool:
+        """
+        用飞书资料回填库中空的 tel/avatar/fs_open_id（不覆盖已有有效值）。
+        返回是否有字段被更新。
+        """
+        if not user_info or not isinstance(res, dict):
+            return False
+        changed = False
+
+        mobile = self._extract_mobile(res)
+        cur_tel = (user_info.tel or '').strip()
+        # 空、或历史脏数据 True/False，允许用飞书号码覆盖
+        if mobile and (
+            not cur_tel or cur_tel.lower() in ('true', 'false', 'none', 'null')
+        ):
+            user_info.tel = mobile
+            changed = True
+
+        avatar = self._extract_avatar(res)
+        if avatar and not (user_info.avatar or '').strip():
+            user_info.avatar = avatar
+            changed = True
+
+        open_id = res.get('open_id') or ''
+        if open_id and not (user_info.fs_open_id or '').strip():
+            user_info.fs_open_id = open_id
+            changed = True
+
+        if changed:
+            session.commit()
+            logger.info(
+                f"[FeiShu] 回填用户资料: user_id={getattr(user_info, 'id', '')}, "
+                f"tel={bool(mobile)}, avatar={bool(avatar)}"
+            )
+        return changed
+
     def _bind_user_by_email(self, session, res: dict, fs_id: str):
         """fs_id 未命中时，用邮箱兜底匹配并补录 fs_id。"""
         from sqlalchemy import func
 
-        self._enrich_email_from_contact(res)
+        self._enrich_profile_from_contact(res)
         fs_email = self._extract_email(res)
         if not fs_email:
             logger.warning(
@@ -355,8 +409,21 @@ class FeiShuAuth:
         if user_info:
             user_info.fs_id = fs_id
             user_info.fs_open_id = res.get('open_id', user_info.fs_open_id or '') or ''
+            # 邮箱绑定时一并回填手机/头像
+            mobile = self._extract_mobile(res)
+            if mobile and (
+                not (user_info.tel or '').strip()
+                or (user_info.tel or '').strip().lower() in ('true', 'false')
+            ):
+                user_info.tel = mobile
+            avatar = self._extract_avatar(res)
+            if avatar and not (user_info.avatar or '').strip():
+                user_info.avatar = avatar
             session.commit()
-            logger.info(f"[FeiShu] 邮箱兜底绑定成功: email={fs_email}, fs_id={fs_id}")
+            logger.info(
+                f"[FeiShu] 邮箱兜底绑定成功: email={fs_email}, fs_id={fs_id}, "
+                f"tel={bool(user_info.tel)}, avatar={bool(user_info.avatar)}"
+            )
         else:
             logger.warning(f"[FeiShu] 邮箱兜底未找到用户: email={fs_email}, fs_id={fs_id}")
         return user_info
@@ -465,6 +532,15 @@ class FeiShuAuth:
             Users.status != '10'
         ).first()
         if user_info:
+            # 已绑定用户也可能缺手机号：补通讯录再回填空字段
+            need_profile = (
+                not (user_info.tel or '').strip()
+                or (user_info.tel or '').strip().lower() in ('true', 'false')
+                or not (user_info.avatar or '').strip()
+            )
+            if need_profile:
+                self._enrich_profile_from_contact(res)
+                self._backfill_user_profile(session, user_info, res)
             return user_info
 
         open_id = res.get('open_id') or ''
@@ -479,6 +555,8 @@ class FeiShuAuth:
                 logger.info(
                     f"[FeiShu] open_id 兜底绑定成功: open_id={open_id}, fs_id={fs_id}"
                 )
+                self._enrich_profile_from_contact(res)
+                self._backfill_user_profile(session, user_info, res)
                 return user_info
 
         user_info = self._bind_user_by_email(session, res, fs_id)
