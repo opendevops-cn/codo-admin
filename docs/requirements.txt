@@ -8,3 +8,4 @@ cos-python-sdk-v5==1.9.25
 pydantic===2.3.0
 SQLAlchemy===2.0.20
 lark-oapi==1.5.2
+qrcode[pil]==8.2

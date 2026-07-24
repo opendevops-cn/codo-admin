@@ -41,9 +41,13 @@ class FeiShuAuth:
         self.__fs_conf = kwargs.get('fs_conf') or {}
         self.code = kwargs.get('code')
         self.fs_redirect_uri = kwargs.get('fs_redirect_uri')
+        # V5 飞书登录允许自动注册；V4 等其它入口保持「只匹配不注册」
+        self.allow_auto_register = bool(kwargs.get('allow_auto_register', False))
         self.redis_conn = cache_conn()
         self._tenant_access_token = None
         self._token_expires_at = 0
+        # call() 失败时的业务错误（供 handler 直接返回）
+        self.last_error = None
 
     def _get_app_credentials(self):
         conf = self.__fs_conf or {}
@@ -248,6 +252,68 @@ class FeiShuAuth:
             logger.warning(f"[FeiShu] 邮箱兜底未找到用户: email={fs_email}, fs_id={fs_id}")
         return user_info
 
+    def _auto_register_user(self, session, res: dict, fs_id: str):
+        """
+        V5 专用：三级匹配均失败后自动注册。
+        无邮箱 → 设置 last_error，不注册。
+        发信失败不阻断登录。
+        """
+        import shortuuid
+        from websdk2.jwt_token import gen_md5
+        from libs.mfa_mail import generate_mfa_secret, send_account_open_mail
+        from services.sys_service import init_email
+
+        self._enrich_email_from_contact(res)
+        fs_email = self._extract_email(res)
+        if not fs_email:
+            logger.warning(
+                f"[FeiShu] 自动注册失败：缺少邮箱 fs_id={fs_id}, "
+                f"res_keys={list(res.keys()) if isinstance(res, dict) else type(res)}"
+            )
+            self.last_error = dict(
+                code=-3,
+                msg='飞书账号未绑定企业邮箱，无法自动开通，请联系管理员',
+            )
+            return None
+
+        name = (res.get('name') or res.get('en_name') or fs_id or '').strip() or fs_id
+        plain_password = shortuuid.uuid()
+        mfa_secret = generate_mfa_secret()
+        open_id = res.get('open_id') or ''
+
+        user = Users(
+            username=name,
+            nickname=name,
+            email=fs_email,
+            tel=res.get('mobile') or '',
+            fs_id=fs_id,
+            fs_open_id=open_id,
+            password=gen_md5(plain_password),
+            google_key=mfa_secret,
+            source='飞书',
+            status='0',
+        )
+        session.add(user)
+        session.commit()
+        logger.info(f"[FeiShu] 自动注册用户成功: email={fs_email}, fs_id={fs_id}")
+
+        # 发信失败不阻断登录
+        try:
+            mailer = init_email()
+            send_account_open_mail(
+                mailer,
+                to_email=fs_email,
+                username=name,
+                email=fs_email,
+                plain_password=plain_password,
+                mfa_secret=mfa_secret,
+                nickname=name,
+            )
+        except Exception as err:
+            logger.error(f"[FeiShu] 自动注册发信异常（不阻断登录）: {err}")
+
+        return user
+
     @staticmethod
     def _detach_user(session, user_info):
         """
@@ -265,7 +331,7 @@ class FeiShuAuth:
         return user_info
 
     def _resolve_user(self, session, res: dict):
-        """fs_id -> open_id -> email 三级匹配，命中则补录 fs_id。"""
+        """fs_id -> open_id -> email 三级匹配；V5 可再自动注册。"""
         fs_id = res.get('user_id') or res.get('open_id')
         if not fs_id:
             return None
@@ -291,9 +357,17 @@ class FeiShuAuth:
                 )
                 return user_info
 
-        return self._bind_user_by_email(session, res, fs_id)
+        user_info = self._bind_user_by_email(session, res, fs_id)
+        if user_info:
+            return user_info
+
+        if self.allow_auto_register:
+            return self._auto_register_user(session, res, fs_id)
+
+        return None
 
     def call(self):
+        self.last_error = None
         user_info = self.get_cache_info()
         if user_info:
             return user_info

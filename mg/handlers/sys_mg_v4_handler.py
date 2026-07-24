@@ -80,14 +80,24 @@ class UserRegisterHandler(RequestHandler, ABC):
 
         password = gen_md5(the_password)
 
-        mfa = base64.b32encode(bytes(str(shortuuid.uuid() + shortuuid.uuid())[:-9], encoding="utf-8")).decode("utf-8")
+        from libs.mfa_mail import generate_mfa_secret, send_account_open_mail
+
+        mfa = generate_mfa_secret()
 
         with DBContext('w', None, True) as session:
             session.add(Users(username=username, password=password, nickname=nickname, department=department, tel=tel,
                               email=email, google_key=mfa, superuser='10', status=user_state))
 
         obj = init_email()
-        obj.send_mail(email, '用户注册成功', '密码为：{} \n MFA：{}'.format(the_password, mfa), subtype='plain')
+        send_account_open_mail(
+            obj,
+            to_email=email,
+            username=username,
+            email=email,
+            plain_password=the_password,
+            mfa_secret=mfa,
+            nickname=nickname or '',
+        )
 
         return self.write(dict(code=0, msg='恭喜你！ 注册成功，赶紧联系管理员给你添加权限吧！！！', mfa=mfa))
 

@@ -80,7 +80,14 @@ async def ldap_verify(username, password):
 
 
 async def feishu_verify(**kwargs) -> Optional[Users]:
-    return FeiShuAuth(**kwargs)()
+    # V5 飞书登录：允许自动注册；业务错误通过 auth.last_error 返回 dict
+    kwargs = dict(kwargs)
+    kwargs.setdefault('allow_auto_register', True)
+    auth = FeiShuAuth(**kwargs)
+    user = auth()
+    if user is None and getattr(auth, 'last_error', None):
+        return auth.last_error
+    return user
 
 
 async def dingtalk_verify(**kwargs) -> Optional[Users]:

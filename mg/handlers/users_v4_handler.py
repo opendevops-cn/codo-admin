@@ -127,17 +127,28 @@ class ResetMFAHandler(BaseHandler, ABC):
         if len(user_list) < 1:
             return self.write(dict(code=-1, msg='用户不能为空'))
 
+        from libs.mfa_mail import generate_mfa_secret, send_mfa_reset_mail
+
         obj = init_email()
+        last_mfa = ''
 
         with DBContext('w', None, True) as session:
             for user_id in user_list:
-                mfa = base64.b32encode(bytes(str(shortuuid.uuid() + shortuuid.uuid())[:-9], encoding="utf-8")).decode(
-                    "utf-8")
+                mfa = generate_mfa_secret()
+                last_mfa = mfa
                 session.query(Users).filter(Users.id == user_id).update({Users.last_ip: '', Users.google_key: mfa})
-                mail_to = session.query(Users.email).filter(Users.id == user_id).first()
-
-                obj.send_mail(mail_to[0], '重置MFA', mfa, subtype='plain')
-        return self.write(dict(code=0, msg='重置MFA成功', data=mfa))
+                user_row = session.query(Users).filter(Users.id == user_id).first()
+                if not user_row or not user_row.email:
+                    continue
+                send_mfa_reset_mail(
+                    obj,
+                    to_email=user_row.email,
+                    username=user_row.username or '',
+                    email=user_row.email or '',
+                    mfa_secret=mfa,
+                    nickname=user_row.nickname or '',
+                )
+        return self.write(dict(code=0, msg='重置MFA成功', data=last_mfa))
 
 
 class ResetPasswordHandler(BaseHandler, ABC):
