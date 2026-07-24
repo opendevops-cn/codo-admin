@@ -248,6 +248,22 @@ class FeiShuAuth:
             logger.warning(f"[FeiShu] 邮箱兜底未找到用户: email={fs_email}, fs_id={fs_id}")
         return user_info
 
+    @staticmethod
+    def _detach_user(session, user_info):
+        """
+        commit 后属性会被 expire；session 关闭后 handler 再读 status 会
+        DetachedInstanceError。在离开 session 前 refresh + expunge。
+        """
+        if user_info is None:
+            return None
+        try:
+            session.refresh(user_info)
+        except Exception:
+            # refresh 失败时至少把已加载字段留在实例上
+            pass
+        session.expunge(user_info)
+        return user_info
+
     def _resolve_user(self, session, res: dict):
         """fs_id -> open_id -> email 三级匹配，命中则补录 fs_id。"""
         fs_id = res.get('user_id') or res.get('open_id')
@@ -297,6 +313,7 @@ class FeiShuAuth:
 
         with DBContext('w') as session:
             user_info = self._resolve_user(session, res)
+            user_info = self._detach_user(session, user_info)
 
         self.redis_conn.set(f"feishu_login_cache___{self.code}", json.dumps(res), ex=180)
         return user_info
@@ -324,6 +341,7 @@ class FeiShuAuth:
 
         with DBContext('w') as session:
             user_info = self._resolve_user(session, res)
+            user_info = self._detach_user(session, user_info)
 
         return user_info
 
