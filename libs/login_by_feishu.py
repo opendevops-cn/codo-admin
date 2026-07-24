@@ -29,30 +29,68 @@ class FeiShuAuth:
         self.fs_redirect_uri = kwargs.get('fs_redirect_uri')
         self.redis_conn = cache_conn()
 
+    @staticmethod
+    def _decode_cached(cached):
+        """Redis 可能返回 bytes，统一转 str。"""
+        if isinstance(cached, bytes):
+            return cached.decode('utf-8')
+        return cached
+
+    @staticmethod
+    def _extract_email(res: dict) -> str:
+        """飞书可能返回 email 或 enterprise_email。"""
+        raw = res.get('email') or res.get('enterprise_email') or ''
+        if isinstance(raw, bytes):
+            raw = raw.decode('utf-8')
+        return str(raw).strip()
+
+    def _bind_user_by_email(self, session, res: dict, fs_id: str):
+        """fs_id 未命中时，用邮箱兜底匹配并补录 fs_id。"""
+        from sqlalchemy import func
+
+        fs_email = self._extract_email(res)
+        if not fs_email:
+            logger.warning(
+                f"[FeiShu] fs_id={fs_id} 未匹配且无 email/enterprise_email，跳过邮箱兜底；"
+                f"res_keys={list(res.keys()) if isinstance(res, dict) else type(res)}"
+            )
+            return None
+
+        # 大小写不敏感匹配，兼容 email / enterprise_email 与库内大小写差异
+        user_info = session.query(Users).filter(
+            func.lower(Users.email) == fs_email.lower(),
+            Users.status != '10'
+        ).first()
+
+        if user_info:
+            user_info.fs_id = fs_id
+            user_info.fs_open_id = res.get('open_id', user_info.fs_open_id or '') or ''
+            session.commit()
+            logger.info(f"[FeiShu] 邮箱兜底绑定成功: email={fs_email}, fs_id={fs_id}")
+        else:
+            logger.warning(f"[FeiShu] 邮箱兜底未找到用户: email={fs_email}, fs_id={fs_id}")
+        return user_info
+
     def call(self):
         user_info = self.get_cache_info()
         if user_info: return user_info
 
         access_token = self.get_access_token()
         res = self.get_feishu_user(access_token)
-        if not res or 'user_id' not in res: return None
+        if not res or 'user_id' not in res:
+            logger.warning(
+                f"[FeiShu] 获取用户信息失败或缺少 user_id: "
+                f"res_keys={list(res.keys()) if isinstance(res, dict) else res}"
+            )
+            return None
 
+        fs_id = res.get('user_id')
         with DBContext('w') as session:
-            user_info = session.query(Users).filter(Users.fs_id == res.get('user_id'),
+            user_info = session.query(Users).filter(Users.fs_id == fs_id,
                                                     Users.status != '10').first()
 
             if not user_info:
-                fs_email = res.get('email', '')
-                if fs_email:
-                    user_info = session.query(Users).filter(
-                        Users.email == fs_email,
-                        Users.status != '10'
-                    ).first()
-                    if user_info:
-                        # 补录 fs_id，恢复主登录通道
-                        user_info.fs_id = res.get('user_id')
-                        user_info.fs_open_id = res.get('open_id', user_info.fs_open_id or '')
-                        session.commit()
+                user_info = self._bind_user_by_email(session, res, fs_id)
 
         self.redis_conn.set(f"feishu_login_cache___{self.code}", json.dumps(res), ex=180)
         return user_info
@@ -62,13 +100,18 @@ class FeiShuAuth:
         if not cached:
             return None
 
+        cached = self._decode_cached(cached)
         try:
             res = json.loads(cached)
+            if not isinstance(res, dict):
+                res = {'user_id': str(res)}
         except (TypeError, json.JSONDecodeError):
             # 兼容旧缓存（只存了 fs_id 字符串）
             res = {'user_id': cached}
 
         fs_id = res.get('user_id')
+        if isinstance(fs_id, bytes):
+            fs_id = fs_id.decode('utf-8')
         if not fs_id:
             return None
 
@@ -76,16 +119,7 @@ class FeiShuAuth:
             user_info = session.query(Users).filter(Users.fs_id == fs_id, Users.status != '10').first()
 
             if not user_info:
-                fs_email = res.get('email', '')
-                if fs_email:
-                    user_info = session.query(Users).filter(
-                        Users.email == fs_email,
-                        Users.status != '10'
-                    ).first()
-                    if user_info:
-                        user_info.fs_id = fs_id
-                        user_info.fs_open_id = res.get('open_id', user_info.fs_open_id or '')
-                        session.commit()
+                user_info = self._bind_user_by_email(session, res, fs_id)
 
         return user_info
 
