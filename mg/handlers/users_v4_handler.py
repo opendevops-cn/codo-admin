@@ -128,6 +128,7 @@ class ResetMFAHandler(BaseHandler, ABC):
             return self.write(dict(code=-1, msg='用户不能为空'))
 
         from libs.mfa_mail import generate_mfa_secret, send_mfa_reset_mail
+        from libs.mfa_utils import build_ext_info_with_mfa_bound
 
         obj = init_email()
         last_mfa = ''
@@ -136,9 +137,15 @@ class ResetMFAHandler(BaseHandler, ABC):
             for user_id in user_list:
                 mfa = generate_mfa_secret()
                 last_mfa = mfa
-                session.query(Users).filter(Users.id == user_id).update({Users.last_ip: '', Users.google_key: mfa})
                 user_row = session.query(Users).filter(Users.id == user_id).first()
-                if not user_row or not user_row.email:
+                if not user_row:
+                    continue
+                user_row.last_ip = ''
+                user_row.google_key = mfa
+                # 重置后需重新引导绑定
+                user_row.ext_info = build_ext_info_with_mfa_bound(user_row.ext_info, bound='no')
+                session.add(user_row)
+                if not user_row.email:
                     continue
                 send_mfa_reset_mail(
                     obj,

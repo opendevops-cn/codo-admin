@@ -81,7 +81,9 @@ def sync_user_from_ucenter():
                     ).first()
                     if not existing:
                         from libs.mfa_mail import generate_mfa_secret
+                        from libs.mfa_utils import build_ext_info_with_mfa_bound
                         user_kw['google_key'] = generate_mfa_secret()
+                        user_kw['ext_info'] = build_ext_info_with_mfa_bound(bound='no')
                     session.add(insert_or_update(
                         Users,
                         f"source_account_id='{user_id}'",

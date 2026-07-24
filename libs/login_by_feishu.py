@@ -381,6 +381,8 @@ class FeiShuAuth:
         mfa_secret = generate_mfa_secret()
         open_id = res.get('open_id') or ''
 
+        from libs.mfa_utils import build_ext_info_with_mfa_bound
+
         user = Users(
             username=username,
             nickname=nickname,
@@ -393,6 +395,7 @@ class FeiShuAuth:
             google_key=mfa_secret,
             source='飞书',
             status='0',
+            ext_info=build_ext_info_with_mfa_bound(bound='no'),
         )
         session.add(user)
         session.commit()

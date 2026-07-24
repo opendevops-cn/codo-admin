@@ -89,20 +89,34 @@ class LoginHandler(RequestHandler, ABC):
         dynamic = data.get('dynamic')
         c_url = data.get('c_url', '/')
         login_type = data.get('login_type')
-        user_info = await self.authenticate(username, password, login_type, data)
-        if not user_info:
-            if login_type == 'feishu':
-                return self.write(dict(code=-3, msg='账号异常，请联系管理员'))
-            return self.write(dict(code=-4, msg='用户名密码错误'))
+        mfa_ticket = data.get('mfa_ticket') or ''
 
-        if isinstance(user_info, dict) and "code" in user_info:
-            return self.write(user_info)
+        # MFA 二次提交：用 mfa_ticket 恢复用户，无需再走飞书 code / 密码
+        user_info = None
+        if mfa_ticket and dynamic:
+            from libs.mfa_utils import pop_user_id_by_mfa_ticket
+            from services.login_service import get_user_info_for_id
+            uid = pop_user_id_by_mfa_ticket(mfa_ticket)
+            if not uid:
+                return self.write(dict(code=-3, msg='MFA 会话已过期，请重新登录'))
+            user_info = get_user_info_for_id(int(uid))
+            if not user_info:
+                return self.write(dict(code=-4, msg='用户不存在或者账号被禁用'))
+        else:
+            user_info = await self.authenticate(username, password, login_type, data)
+            if not user_info:
+                if login_type == 'feishu':
+                    return self.write(dict(code=-3, msg='账号异常，请联系管理员'))
+                return self.write(dict(code=-4, msg='用户名密码错误'))
+
+            if isinstance(user_info, dict) and "code" in user_info:
+                return self.write(user_info)
 
         if user_info.status != '0':
             return self.write(dict(code=-5, msg='账号被禁用'))
 
         user_id = str(user_info.id)
-        generate_token_dict = await generate_token(user_info, dynamic)
+        generate_token_dict = await generate_token(user_info, dynamic, mfa_ticket=mfa_ticket)
         if "auth_key" not in generate_token_dict:
             return self.write(generate_token_dict)
         else:

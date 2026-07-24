@@ -125,18 +125,48 @@ def update_login_ip(user_id: str, login_ip_list: str):
         logging.error(f"记录登录IP失败: {err}")
 
 
-async def generate_token(user_info, dynamic=None):
+async def generate_token(user_info, dynamic=None, mfa_ticket: str = None):
+    """
+    签发登录 token；支持首次 MFA 引导。
+    - 有 google_key 且 ext_info.mfa.bound == 'no' → code=88 引导绑定（带密钥/QR + mfa_ticket）
+    - 有 google_key 且 bound == 'yes'（或缺省兼容）→ code=66 二次验证
+    - dynamic 校验成功 → 写 bound=yes，签发 token
+    """
+    from libs.mfa_utils import (
+        is_mfa_pending_setup,
+        build_setup_payload,
+        build_verify_payload,
+        create_mfa_ticket,
+        mark_mfa_bound,
+        delete_mfa_ticket,
+    )
+
     mfa_key = None
     auth_token = AuthToken()
     user_id = str(user_info.id)
 
     if user_info.google_key:
+        pending = is_mfa_pending_setup(user_info)
         if not dynamic:
-            return dict(code=66, msg='跳转二次认证')
-        if pyotp.TOTP(user_info.google_key).now() != str(dynamic):
+            ticket = create_mfa_ticket(int(user_info.id))
+            if pending:
+                data = build_setup_payload(user_info)
+                data['mfa_ticket'] = ticket
+                return dict(code=88, msg='请绑定二次验证后登录', data=data)
+            data = build_verify_payload(user_info)
+            data['mfa_ticket'] = ticket
+            return dict(code=66, msg='跳转二次认证', data=data)
+
+        totp = pyotp.TOTP(user_info.google_key)
+        if not totp.verify(str(dynamic), valid_window=1):
             return dict(code=-5, msg='MFA错误')
+
+        if pending:
+            mark_mfa_bound(int(user_info.id), bound='yes')
+        if mfa_ticket:
+            delete_mfa_ticket(mfa_ticket)
+
         mfa_key = auth_token.encode_mfa_token(user_id=user_id, email=user_info.email)
-        # self.set_cookie("mfa_key", mfa_key, expires_days=1, httponly=True)
 
     token_info = dict(user_id=user_id, username=user_info.username, nickname=user_info.nickname,
                       email=user_info.email, is_superuser=True if user_info.superuser == '0' else False)
@@ -258,4 +288,10 @@ def get_user_info_for_id(user_id: int) -> Optional[Users]:
     with DBContext('r') as session:
         user_info: Optional[Users] = session.query(Users).filter(Users.id == user_id,
                                                                  Users.status == "0").first()
+        if user_info is not None:
+            # 离开 session 后 handler / generate_token 仍需读属性
+            try:
+                session.expunge(user_info)
+            except Exception:
+                pass
     return user_info
