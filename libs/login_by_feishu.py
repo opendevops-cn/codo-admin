@@ -6,11 +6,12 @@ Author  : shenshuo
 Date    : 2023/6/10 15:14
 Desc    : 飞书登录验证（v4/v5）
 
-用户信息获取优先走与 v6 相同的 Open API：
+用户信息获取优先走 Open API（与 v6 相同接口，URL 写死在本文件）：
   tenant_access_token -> authen/v1/oidc/access_token -> authen/v1/user_info
-失败时回退旧 Passport OAuth，兼容仍走 passport 授权的前端。
+失败时回退旧 Passport OAuth（URL 仍来自 fs_conf，兼容现网配置）。
 """
 import json
+import time
 import urllib.parse
 import requests
 from loguru import logger
@@ -25,6 +26,15 @@ feishu_client_secret
 feishu_auth
 """
 
+# ---------------------------------------------------------------------------
+# 飞书 Open API（与 v6 一致，写死本文件，不读配置、不引用 v6 模块）
+# ---------------------------------------------------------------------------
+FEISHU_OPEN_BASE_URL = "https://open.feishu.cn/open-apis"
+FEISHU_TENANT_TOKEN_URL = f"{FEISHU_OPEN_BASE_URL}/auth/v3/tenant_access_token/internal"
+FEISHU_OIDC_ACCESS_TOKEN_URL = f"{FEISHU_OPEN_BASE_URL}/authen/v1/oidc/access_token"
+FEISHU_USER_INFO_URL = f"{FEISHU_OPEN_BASE_URL}/authen/v1/user_info"
+FEISHU_CONTACT_USER_URL = f"{FEISHU_OPEN_BASE_URL}/contact/v3/users/{{user_id}}"
+
 
 class FeiShuAuth:
     def __init__(self, **kwargs):
@@ -32,8 +42,8 @@ class FeiShuAuth:
         self.code = kwargs.get('code')
         self.fs_redirect_uri = kwargs.get('fs_redirect_uri')
         self.redis_conn = cache_conn()
-        # Open API 客户端（与 v6 共用 libs.auth_utils.feishu.FeiShuAuth）
-        self._open_auth = None
+        self._tenant_access_token = None
+        self._token_expires_at = 0
 
     def _get_app_credentials(self):
         conf = self.__fs_conf or {}
@@ -41,42 +51,114 @@ class FeiShuAuth:
         app_secret = conf.get('feishu_client_secret') or conf.get('feishu_app_secret')
         return app_id, app_secret
 
-    def _get_open_auth(self):
-        """懒加载 v6 同款 Open API 客户端。"""
-        if self._open_auth is not None:
-            return self._open_auth
+    def _get_tenant_access_token(self):
+        """Open API: tenant_access_token（写死 URL）。"""
+        if self._tenant_access_token and time.time() < self._token_expires_at:
+            return self._tenant_access_token
+
         app_id, app_secret = self._get_app_credentials()
         if not app_id or not app_secret:
-            logger.warning("[FeiShu] 缺少 client_id/client_secret，无法使用 Open API")
+            logger.warning("[FeiShu] 缺少 client_id/client_secret，无法调用 Open API")
             return None
-        from libs.auth_utils.feishu import FeiShuAuth as OpenFeiShuAuth
-        self._open_auth = OpenFeiShuAuth(app_id=app_id, app_secret=app_secret)
-        return self._open_auth
+
+        try:
+            resp = requests.post(
+                FEISHU_TENANT_TOKEN_URL,
+                json={'app_id': app_id, 'app_secret': app_secret},
+                timeout=10,
+            )
+            data = resp.json()
+            if data.get('code') == 0:
+                self._tenant_access_token = data.get('tenant_access_token')
+                self._token_expires_at = time.time() + data.get('expire', 7200) - 300
+                return self._tenant_access_token
+            logger.warning(f"[FeiShu] 获取 tenant_access_token 失败: {data}")
+        except Exception as err:
+            logger.warning(f"[FeiShu] 获取 tenant_access_token 异常: {err}")
+        return None
+
+    def _get_user_info_by_open_api(self, code: str):
+        """
+        与 v6 相同链路（URL 写死本文件）:
+          tenant_access_token -> oidc/access_token -> user_info
+        """
+        tenant_token = self._get_tenant_access_token()
+        if not tenant_token:
+            return None
+
+        try:
+            token_resp = requests.post(
+                FEISHU_OIDC_ACCESS_TOKEN_URL,
+                headers={
+                    'Authorization': f'Bearer {tenant_token}',
+                    'Content-Type': 'application/json',
+                },
+                json={'grant_type': 'authorization_code', 'code': code},
+                timeout=10,
+            )
+            token_data = token_resp.json()
+            if token_data.get('code') != 0:
+                logger.warning(f"[FeiShu] Open API 换 user access_token 失败: {token_data}")
+                return None
+
+            user_access_token = (token_data.get('data') or {}).get('access_token')
+            if not user_access_token:
+                logger.warning(f"[FeiShu] Open API 响应无 access_token: {token_data}")
+                return None
+
+            info_resp = requests.get(
+                FEISHU_USER_INFO_URL,
+                headers={'Authorization': f'Bearer {user_access_token}'},
+                timeout=10,
+            )
+            info_data = info_resp.json()
+            if info_data.get('code') != 0:
+                logger.warning(f"[FeiShu] Open API 获取 user_info 失败: {info_data}")
+                return None
+
+            return info_data.get('data') or {}
+        except Exception as err:
+            logger.warning(f"[FeiShu] Open API 获取用户信息异常: {err}")
+            return None
+
+    def _get_contact_user(self, user_id: str, user_id_type: str = 'user_id'):
+        """通讯录查用户详情（写死 URL），用于补 email。"""
+        tenant_token = self._get_tenant_access_token()
+        if not tenant_token or not user_id:
+            return None
+
+        url = FEISHU_CONTACT_USER_URL.format(user_id=user_id)
+        try:
+            resp = requests.get(
+                url,
+                headers={'Authorization': f'Bearer {tenant_token}'},
+                params={'user_id_type': user_id_type},
+                timeout=10,
+            )
+            data = resp.json()
+            if data.get('code') == 0:
+                return (data.get('data') or {}).get('user') or {}
+            logger.warning(f"[FeiShu] 通讯录查询失败 id_type={user_id_type}: {data}")
+        except Exception as err:
+            logger.warning(f"[FeiShu] 通讯录查询异常 id_type={user_id_type}: {err}")
+        return None
 
     def fetch_user_info(self):
         """
         获取飞书用户信息。
-        优先 v6 Open API；失败再回退 Passport userinfo。
-        返回 dict，至少应含 user_id 或 open_id。
+        优先 Open API（写死 URL）；失败再回退 Passport userinfo。
         """
-        # 1) v6 同款：Open API OIDC
-        open_auth = self._get_open_auth()
-        if open_auth and self.code:
-            try:
-                res = open_auth.get_user_info_by_code(self.code)
-                if res and (res.get('user_id') or res.get('open_id')):
-                    logger.info(
-                        f"[FeiShu] Open API 获取用户信息成功: "
-                        f"keys={list(res.keys())}"
-                    )
-                    return res
-                logger.warning(
-                    f"[FeiShu] Open API 未返回有效用户: res={res}"
+        # 1) Open API（与 v6 相同接口）
+        if self.code:
+            res = self._get_user_info_by_open_api(self.code)
+            if res and (res.get('user_id') or res.get('open_id')):
+                logger.info(
+                    f"[FeiShu] Open API 获取用户信息成功: keys={list(res.keys())}"
                 )
-            except Exception as err:
-                logger.warning(f"[FeiShu] Open API 获取用户信息异常: {err}")
+                return res
+            logger.warning(f"[FeiShu] Open API 未返回有效用户: res={res}")
 
-        # 2) 回退旧 Passport（前端仍可能走 passport 授权拿 code）
+        # 2) 回退旧 Passport（URL 来自现网 fs_conf）
         logger.warning("[FeiShu] 回退 Passport OAuth 获取用户信息")
         access_token = self.get_access_token()
         if not access_token:
@@ -109,22 +191,17 @@ class FeiShuAuth:
         return str(raw).strip()
 
     def _enrich_email_from_contact(self, res: dict) -> None:
-        """
-        user_info 无 email 时，用通讯录补全。
-        优先复用 v6 Open API 客户端的 get_user_detail。
-        """
+        """user_info 无 email 时，用通讯录补全（写死 URL）。"""
         if not isinstance(res, dict) or self._extract_email(res):
             return
 
-        open_auth = self._get_open_auth()
         detail = None
-        if open_auth:
-            fs_id = res.get('user_id')
-            open_id = res.get('open_id')
-            if fs_id:
-                detail = open_auth.get_user_detail(fs_id, user_id_type='user_id')
-            if not detail and open_id:
-                detail = open_auth.get_user_detail(open_id, user_id_type='open_id')
+        fs_id = res.get('user_id')
+        open_id = res.get('open_id')
+        if fs_id:
+            detail = self._get_contact_user(fs_id, user_id_type='user_id')
+        if not detail and open_id:
+            detail = self._get_contact_user(open_id, user_id_type='open_id')
 
         if not detail:
             logger.warning(
@@ -255,7 +332,7 @@ class FeiShuAuth:
         pass
 
     def get_access_token(self):
-        """旧 Passport 换 token（回退路径）。"""
+        """旧 Passport 换 token（回退路径，URL 来自 fs_conf）。"""
         url = self.__fs_conf.get('feishu_access_url')
         if not url:
             return None
@@ -281,7 +358,7 @@ class FeiShuAuth:
         return None
 
     def get_feishu_user(self, access_token):
-        """旧 Passport userinfo（回退路径）。"""
+        """旧 Passport userinfo（回退路径，URL 来自 fs_conf）。"""
         url = self.__fs_conf.get('feishu_user_info_url')
         if not url or not access_token:
             return None
