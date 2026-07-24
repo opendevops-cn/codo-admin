@@ -194,9 +194,83 @@ class FeiShuAuth:
             raw = raw.decode('utf-8')
         return str(raw).strip()
 
-    def _enrich_email_from_contact(self, res: dict) -> None:
-        """user_info 无 email 时，用通讯录补全（写死 URL）。"""
-        if not isinstance(res, dict) or self._extract_email(res):
+    @staticmethod
+    def _extract_avatar(res: dict) -> str:
+        """从 user_info / 通讯录结构中取头像 URL。"""
+        if not isinstance(res, dict):
+            return ''
+        for key in ('avatar_url', 'avatar_big', 'avatar_middle', 'avatar_thumb', 'picture'):
+            val = res.get(key)
+            if isinstance(val, str) and val.strip():
+                return val.strip()
+        avatar = res.get('avatar')
+        if isinstance(avatar, str) and avatar.strip():
+            return avatar.strip()
+        if isinstance(avatar, dict):
+            for key in ('avatar_240', 'avatar_640', 'avatar_72', 'avatar_origin', 'avatar'):
+                val = avatar.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+        return ''
+
+    @staticmethod
+    def _extract_mobile(res: dict) -> str:
+        if not isinstance(res, dict):
+            return ''
+        raw = res.get('mobile') or res.get('mobile_visible') or res.get('tel') or ''
+        if isinstance(raw, bytes):
+            raw = raw.decode('utf-8')
+        # 飞书 mobile 常带 +86 前缀，入库前去掉空白
+        return str(raw).strip()
+
+    @staticmethod
+    def _username_from_email(email: str, fs_id: str = '') -> str:
+        """
+        username 用邮箱 @ 前本地部分，例如 aaa@xxx.com -> aaa。
+        不做中文名。
+        """
+        local = ''
+        if email and '@' in email:
+            local = email.split('@', 1)[0].strip()
+        # 仅保留常见安全字符，避免异常符号
+        safe = ''.join(ch for ch in local if ch.isalnum() or ch in ('.', '_', '-'))
+        safe = safe.strip('._-') or ''
+        if safe:
+            return safe[:50]
+        # 兜底：fs_id / open_id 截断
+        fallback = (fs_id or 'fs_user').replace(' ', '')[:50]
+        return fallback or 'fs_user'
+
+    def _ensure_unique_username(self, session, username: str, fs_id: str) -> str:
+        """username 冲突时追加后缀，保证可登录标识可用。"""
+        base = (username or 'fs_user')[:40]
+        candidate = base
+        n = 0
+        while True:
+            exists = session.query(Users).filter(
+                Users.username == candidate,
+                Users.status != '10',
+            ).first()
+            if not exists:
+                return candidate
+            n += 1
+            suffix = f"_{n}" if n < 50 else f"_{(fs_id or 'x')[-6:]}"
+            candidate = f"{base[:50 - len(suffix)]}{suffix}"
+            if n >= 50:
+                return candidate
+
+    def _enrich_profile_from_contact(self, res: dict) -> None:
+        """
+        补全 email / mobile / avatar。
+        Open API user_info 常缺 mobile，需走通讯录。
+        """
+        if not isinstance(res, dict):
+            return
+
+        need_email = not self._extract_email(res)
+        need_mobile = not self._extract_mobile(res)
+        need_avatar = not self._extract_avatar(res)
+        if not (need_email or need_mobile or need_avatar):
             return
 
         detail = None
@@ -208,22 +282,40 @@ class FeiShuAuth:
             detail = self._get_contact_user(open_id, user_id_type='open_id')
 
         if not detail:
-            logger.warning(
-                f"[FeiShu] 通讯录未能补到邮箱: user_id={res.get('user_id')}, "
-                f"open_id={res.get('open_id')}"
-            )
+            if need_email:
+                logger.warning(
+                    f"[FeiShu] 通讯录未能补全资料: user_id={res.get('user_id')}, "
+                    f"open_id={res.get('open_id')}"
+                )
             return
 
-        email = detail.get('email') or detail.get('enterprise_email') or ''
-        if email:
-            res['email'] = email
-            if detail.get('enterprise_email'):
-                res['enterprise_email'] = detail.get('enterprise_email')
-            logger.info(f"[FeiShu] 通讯录补邮箱成功: email={email}")
-        else:
-            logger.warning(
-                f"[FeiShu] 通讯录用户无邮箱字段: keys={list(detail.keys())}"
-            )
+        if need_email:
+            email = detail.get('email') or detail.get('enterprise_email') or ''
+            if email:
+                res['email'] = email
+                if detail.get('enterprise_email'):
+                    res['enterprise_email'] = detail.get('enterprise_email')
+                logger.info(f"[FeiShu] 通讯录补邮箱成功: email={email}")
+            else:
+                logger.warning(
+                    f"[FeiShu] 通讯录用户无邮箱字段: keys={list(detail.keys())}"
+                )
+
+        if need_mobile:
+            mobile = self._extract_mobile(detail)
+            if mobile:
+                res['mobile'] = mobile
+                logger.info(f"[FeiShu] 通讯录补手机成功: mobile={mobile}")
+
+        if need_avatar:
+            avatar = self._extract_avatar(detail)
+            if avatar:
+                res['avatar_url'] = avatar
+                logger.info("[FeiShu] 通讯录补头像成功")
+
+    # 兼容旧方法名
+    def _enrich_email_from_contact(self, res: dict) -> None:
+        self._enrich_profile_from_contact(res)
 
     def _bind_user_by_email(self, session, res: dict, fs_id: str):
         """fs_id 未命中时，用邮箱兜底匹配并补录 fs_id。"""
@@ -256,6 +348,7 @@ class FeiShuAuth:
         """
         V5 专用：三级匹配均失败后自动注册。
         无邮箱 → 设置 last_error，不注册。
+        username 取邮箱 @ 前本地部分（非中文名）；补 tel / avatar。
         发信失败不阻断登录。
         """
         import shortuuid
@@ -263,7 +356,7 @@ class FeiShuAuth:
         from libs.mfa_mail import generate_mfa_secret, send_account_open_mail
         from services.sys_service import init_email
 
-        self._enrich_email_from_contact(res)
+        self._enrich_profile_from_contact(res)
         fs_email = self._extract_email(res)
         if not fs_email:
             logger.warning(
@@ -276,16 +369,24 @@ class FeiShuAuth:
             )
             return None
 
-        name = (res.get('name') or res.get('en_name') or fs_id or '').strip() or fs_id
+        nickname = (res.get('name') or res.get('en_name') or fs_email or fs_id or '').strip() or fs_id
+        username = self._ensure_unique_username(
+            session,
+            self._username_from_email(fs_email, fs_id=fs_id),
+            fs_id,
+        )
+        tel = self._extract_mobile(res)
+        avatar = self._extract_avatar(res)
         plain_password = shortuuid.uuid()
         mfa_secret = generate_mfa_secret()
         open_id = res.get('open_id') or ''
 
         user = Users(
-            username=name,
-            nickname=name,
+            username=username,
+            nickname=nickname,
             email=fs_email,
-            tel=res.get('mobile') or '',
+            tel=tel,
+            avatar=avatar,
             fs_id=fs_id,
             fs_open_id=open_id,
             password=gen_md5(plain_password),
@@ -295,7 +396,10 @@ class FeiShuAuth:
         )
         session.add(user)
         session.commit()
-        logger.info(f"[FeiShu] 自动注册用户成功: email={fs_email}, fs_id={fs_id}")
+        logger.info(
+            f"[FeiShu] 自动注册用户成功: username={username}, email={fs_email}, "
+            f"fs_id={fs_id}, tel={bool(tel)}, avatar={bool(avatar)}"
+        )
 
         # 发信失败不阻断登录
         try:
@@ -303,11 +407,11 @@ class FeiShuAuth:
             send_account_open_mail(
                 mailer,
                 to_email=fs_email,
-                username=name,
+                username=username,
                 email=fs_email,
                 plain_password=plain_password,
                 mfa_secret=mfa_secret,
-                nickname=name,
+                nickname=nickname,
             )
         except Exception as err:
             logger.error(f"[FeiShu] 自动注册发信异常（不阻断登录）: {err}")

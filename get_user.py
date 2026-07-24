@@ -68,14 +68,25 @@ def sync_user_from_ucenter():
                 # if username.startswith('wb-'): continue
 
                 try:
-                    session.add(insert_or_update(Users,
-                                                 # f"username='{user_name}' and source_account_id='{user_id}' and nickname='{user.get('name')}'",
-                                                 f"source_account_id='{user_id}'",
-                                                 source_account_id=user_id, fs_id=user.get('feishu_userid'),
-                                                 nickname=user.get('name'), manager=user.get('manager', ''),
-                                                 department=user.get('position'), email=user.get('email'),
-                                                 source="ucenter", tel=user.get('mobile'), status='0',
-                                                 avatar=user.get('avatar'), username=user.get('english_name')))
+                    # 仅新建用户补 google_key，避免覆盖已绑定 MFA 的用户
+                    user_kw = dict(
+                        source_account_id=user_id, fs_id=user.get('feishu_userid'),
+                        nickname=user.get('name'), manager=user.get('manager', ''),
+                        department=user.get('position'), email=user.get('email'),
+                        source="ucenter", tel=user.get('mobile'), status='0',
+                        avatar=user.get('avatar'), username=user.get('english_name'),
+                    )
+                    existing = session.query(Users).filter(
+                        Users.source_account_id == user_id
+                    ).first()
+                    if not existing:
+                        from libs.mfa_mail import generate_mfa_secret
+                        user_kw['google_key'] = generate_mfa_secret()
+                    session.add(insert_or_update(
+                        Users,
+                        f"source_account_id='{user_id}'",
+                        **user_kw,
+                    ))
                 except Exception as err:
                     logging.info(f'async_all_user_redis_lock_key Exception {err}')
 
