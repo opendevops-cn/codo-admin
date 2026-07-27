@@ -21,7 +21,7 @@ from websdk2.jwt_token import gen_md5
 from websdk2.tools import RedisLock, now_timestamp, convert
 
 from libs.etcd import Etcd3Client
-from libs.feature_model_utils import insert_or_update
+from libs.ucenter_user_sync import upsert_ucenter_user_safe
 from models.authority import Users, Roles, UserRoles, RoleFunctions, Functions, UserToken
 from models.paas_model import BizModel
 from services.role_service import get_all_user_list_for_role
@@ -381,48 +381,36 @@ def sync_user_from_uc():
         logging.info(f'开始同步用户中心数据 {datetime.datetime.now()}')
         with DBContext('w', None, True, **settings) as session:
             user_id_list = []
-            for user in get_all_user():
-                user_id = str(user.get('uid'))
-                user_id_list.append(user_id)
-                username = user.get('english_name')
+            stats = {'created': 0, 'updated': 0, 'skipped': 0, 'error': 0}
+            for user in get_all_user() or []:
+                user_id = str(user.get('uid') or '')
+                if user_id:
+                    user_id_list.append(user_id)
                 if not user.get('position'):
                     try:
-                        session.query(Users).filter(Users.id == user_id).delete(synchronize_session=False)
-                        session.commit()
+                        if user_id.isdigit():
+                            session.query(Users).filter(Users.id == int(user_id)).delete(
+                                synchronize_session=False
+                            )
+                            session.commit()
                     except Exception as err:
                         print('del', err)
                     continue
-                # if username.startswith('wb-'): continue
 
-                try:
-                    # 仅新建用户补 google_key，避免覆盖已绑定 MFA 的用户
-                    user_kw = dict(
-                        source_account_id=user_id, fs_id=user.get('feishu_userid'),
-                        nickname=user.get('name'), manager=user.get('manager', ''),
-                        department=user.get('position'), email=user.get('email'),
-                        source="ucenter", tel=user.get('mobile'), status='0',
-                        avatar=user.get('avatar'), username=user.get('english_name'),
-                    )
-                    existing = session.query(Users).filter(
-                        Users.source_account_id == user_id
-                    ).first()
-                    if not existing:
-                        from libs.mfa_mail import generate_mfa_secret
-                        from libs.mfa_utils import build_ext_info_with_mfa_bound
-                        user_kw['google_key'] = generate_mfa_secret()
-                        user_kw['ext_info'] = build_ext_info_with_mfa_bound(bound='no')
-                    session.add(insert_or_update(
-                        Users,
-                        f"source_account_id='{user_id}'",
-                        **user_kw,
-                    ))
-                except Exception as err:
-                    logging.error(f'同步用户中心数据 出错 {err}')
+                # 多键认人 + 不覆盖 MFA；单条 savepoint，失败不拖垮整批
+                result = upsert_ucenter_user_safe(session, user)
+                stats[result] = stats.get(result, 0) + 1
 
-            session.query(Users).filter(Users.source == "ucenter", Users.status != "20",
-                                        Users.source_account_id.notin_(user_id_list)).update(
-                {"status": "20"}, synchronize_session=False)
-        logging.info('开始同步用户中心数据 结束')
+            if user_id_list:
+                session.query(Users).filter(
+                    Users.source == "ucenter",
+                    Users.status != "20",
+                    Users.source_account_id.notin_(user_id_list),
+                ).update({"status": "20"}, synchronize_session=False)
+        logging.info(
+            f'同步用户中心数据 结束 created={stats["created"]} '
+            f'updated={stats["updated"]} skipped={stats["skipped"]} error={stats["error"]}'
+        )
 
     index()
 

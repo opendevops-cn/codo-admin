@@ -91,9 +91,10 @@ class LoginHandler(RequestHandler, ABC):
         login_type = data.get('login_type')
         mfa_ticket = data.get('mfa_ticket') or ''
 
-        # MFA 二次提交：用 mfa_ticket 恢复用户，无需再走飞书 code / 密码
+        # MFA 二次提交：优先用 mfa_ticket 恢复用户，无需再走飞书 code / 密码
+        # 注意：输错 dynamic 时 ticket 不删除，可在 TTL 内重试（只返回一次 code=-5）
         user_info = None
-        if mfa_ticket and dynamic:
+        if mfa_ticket:
             from libs.mfa_utils import pop_user_id_by_mfa_ticket
             from services.login_service import get_user_info_for_id
             uid = pop_user_id_by_mfa_ticket(mfa_ticket)
@@ -105,7 +106,14 @@ class LoginHandler(RequestHandler, ABC):
         else:
             user_info = await self.authenticate(username, password, login_type, data)
             if not user_info:
+                # 飞书 code 已被并发请求消费且缓存未命中时会落到这里；
+                # 若前端在 MFA 阶段仍带 code 重试，也应提示重新授权而非笼统「账号异常」
                 if login_type == 'feishu':
+                    if dynamic:
+                        return self.write(dict(
+                            code=-3,
+                            msg='登录状态已失效，请重新点击飞书登录后再完成二次验证',
+                        ))
                     return self.write(dict(code=-3, msg='账号异常，请联系管理员'))
                 return self.write(dict(code=-4, msg='用户名密码错误'))
 
@@ -118,6 +126,7 @@ class LoginHandler(RequestHandler, ABC):
         user_id = str(user_info.id)
         generate_token_dict = await generate_token(user_info, dynamic, mfa_ticket=mfa_ticket)
         if "auth_key" not in generate_token_dict:
+            # 统一单次 JSON 响应（code=88/66/-5 等），前端应只 toast 一次
             return self.write(generate_token_dict)
         else:
             auth_key = generate_token_dict.get('auth_key')

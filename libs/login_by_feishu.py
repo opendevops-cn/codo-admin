@@ -261,23 +261,85 @@ class FeiShuAuth:
         return str(raw).strip()
 
     @staticmethod
+    def _normalize_feishu_avatar_url(url: str) -> str:
+        """
+        飞书 CDN 头像统一为原图参数，避免写入 72x72 裁切版。
+        例：image_size=72x72&format=image → image_size=noop&format=png
+        """
+        if not url or not isinstance(url, str):
+            return ''
+        url = url.strip()
+        if not url:
+            return ''
+        # 仅处理飞书静态资源 CDN；其它 URL 原样返回
+        host = ''
+        try:
+            host = (urllib.parse.urlparse(url).netloc or '').lower()
+        except Exception:
+            return url
+        if not any(x in host for x in ('feishucdn.com', 'feishu.cn', 'larksuite.com', 'larkenterprise.com')):
+            return url
+        try:
+            parsed = urllib.parse.urlparse(url)
+            # parse_qsl 保留空值（cut_type= / quality=）
+            pairs = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+            if not pairs and not parsed.query:
+                return url
+            out = []
+            seen_size = seen_fmt = False
+            for k, v in pairs:
+                lk = (k or '').lower()
+                if lk == 'image_size':
+                    out.append((k, 'noop'))
+                    seen_size = True
+                elif lk == 'format':
+                    out.append((k, 'png'))
+                    seen_fmt = True
+                else:
+                    out.append((k, v))
+            if not seen_size:
+                out.append(('image_size', 'noop'))
+            if not seen_fmt:
+                out.append(('format', 'png'))
+            query = urllib.parse.urlencode(out, doseq=True)
+            return urllib.parse.urlunparse(parsed._replace(query=query))
+        except Exception:
+            return url
+
+    @staticmethod
     def _extract_avatar(res: dict) -> str:
-        """从 user_info / 通讯录结构中取头像 URL。"""
+        """
+        从 user_info / 通讯录结构中取头像 URL。
+        优先原图/大图，避免 avatar_72 / thumb 裁切小图。
+        """
         if not isinstance(res, dict):
             return ''
-        for key in ('avatar_url', 'avatar_big', 'avatar_middle', 'avatar_thumb', 'picture'):
+        candidates = []
+        # Open API user_info 扁平字段：大图优先
+        for key in (
+            'avatar_origin', 'avatar_640', 'avatar_240',
+            'avatar_big', 'avatar_url', 'avatar_middle',
+            'avatar_thumb', 'avatar_72', 'picture',
+        ):
             val = res.get(key)
             if isinstance(val, str) and val.strip():
-                return val.strip()
+                candidates.append(val.strip())
         avatar = res.get('avatar')
         if isinstance(avatar, str) and avatar.strip():
-            return avatar.strip()
+            candidates.append(avatar.strip())
         if isinstance(avatar, dict):
-            for key in ('avatar_240', 'avatar_640', 'avatar_72', 'avatar_origin', 'avatar'):
+            for key in (
+                'avatar_origin', 'avatar_640', 'avatar_240',
+                'avatar_big', 'avatar_middle', 'avatar',
+                'avatar_72', 'avatar_thumb',
+            ):
                 val = avatar.get(key)
                 if isinstance(val, str) and val.strip():
-                    return val.strip()
-        return ''
+                    candidates.append(val.strip())
+        if not candidates:
+            return ''
+        # 已按优先级收集，取第一个并规范化
+        return FeiShuAuth._normalize_feishu_avatar_url(candidates[0])
 
     @staticmethod
     def _extract_mobile(res: dict) -> str:
@@ -420,9 +482,20 @@ class FeiShuAuth:
             changed = True
 
         avatar = self._extract_avatar(res)
-        if avatar and not (user_info.avatar or '').strip():
-            user_info.avatar = avatar
-            changed = True
+        cur_avatar = (user_info.avatar or '').strip()
+        if avatar:
+            # 空头像，或库里仍是飞书裁切小图时，升级为原图
+            need_avatar = (not cur_avatar) or (
+                'image_size=72x72' in cur_avatar
+                or (
+                    'feishucdn.com' in cur_avatar
+                    and 'format=image' in cur_avatar
+                    and 'image_size=noop' not in cur_avatar
+                )
+            )
+            if need_avatar and avatar != cur_avatar:
+                user_info.avatar = avatar
+                changed = True
 
         open_id = res.get('open_id') or ''
         if open_id and not (user_info.fs_open_id or '').strip():
@@ -586,11 +659,20 @@ class FeiShuAuth:
             Users.status != '10'
         ).first()
         if user_info:
-            # 已绑定用户也可能缺手机号：补通讯录再回填空字段
+            # 已绑定用户也可能缺手机号/头像，或头像仍是 72 裁切：补通讯录再回填
+            cur_avatar = (user_info.avatar or '').strip()
+            avatar_needs_upgrade = (not cur_avatar) or (
+                'image_size=72x72' in cur_avatar
+                or (
+                    'feishucdn.com' in cur_avatar
+                    and 'format=image' in cur_avatar
+                    and 'image_size=noop' not in cur_avatar
+                )
+            )
             need_profile = (
                 not (user_info.tel or '').strip()
                 or (user_info.tel or '').strip().lower() in ('true', 'false')
-                or not (user_info.avatar or '').strip()
+                or avatar_needs_upgrade
             )
             if need_profile:
                 self._enrich_profile_from_contact(res)
@@ -622,8 +704,93 @@ class FeiShuAuth:
 
         return None
 
+    def _cache_user_profile(self, res: dict) -> None:
+        """缓存飞书用户资料（不含内部 _ 字段），供 code 二次使用。"""
+        if not self.code or not isinstance(res, dict):
+            return
+        cache_payload = {
+            k: v for k, v in res.items()
+            if not str(k).startswith('_')
+        }
+        try:
+            self.redis_conn.set(
+                f"feishu_login_cache___{self.code}",
+                json.dumps(cache_payload, ensure_ascii=False),
+                ex=180,
+            )
+        except Exception as err:
+            logger.warning(f"[FeiShu] 写登录缓存失败: {err}")
+
+    def _load_cached_profile(self):
+        """读取 code 对应的飞书用户资料缓存，无则 None。"""
+        if not self.code:
+            return None
+        try:
+            cached = self.redis_conn.get(f"feishu_login_cache___{self.code}")
+        except Exception:
+            return None
+        if not cached:
+            return None
+        cached = self._decode_cached(cached)
+        try:
+            res = json.loads(cached)
+            if isinstance(res, dict):
+                return res
+            return {'user_id': str(res)}
+        except (TypeError, json.JSONDecodeError):
+            return {'user_id': str(cached)}
+
+    def _acquire_code_lock(self, wait_seconds: float = 8.0) -> bool:
+        """
+        飞书 authorization code 只能兑换一次。
+        并发/双重点击时用 Redis 锁串行化兑换；拿不到锁则等缓存。
+        """
+        if not self.code:
+            return True
+        lock_key = f"feishu_login_lock___{self.code}"
+        deadline = time.time() + wait_seconds
+        while time.time() < deadline:
+            try:
+                # SET NX EX：抢到锁的请求负责调 Open API
+                ok = self.redis_conn.set(lock_key, '1', nx=True, ex=30)
+                if ok:
+                    return True
+            except Exception as err:
+                logger.warning(f"[FeiShu] 获取 code 锁异常，直接继续: {err}")
+                return True
+            # 其它请求已在兑换：等缓存出现
+            if self._load_cached_profile():
+                return False
+            time.sleep(0.15)
+        # 超时仍无锁：若已有缓存则走缓存；否则让本请求再试（避免全失败）
+        return not bool(self._load_cached_profile())
+
     def call(self):
         self.last_error = None
+        # 1) 已有 code 缓存：直接解析用户（避免 authorization code 二次兑换失败）
+        user_info = self.get_cache_info()
+        if user_info:
+            return user_info
+
+        # 2) 并发抢锁：只有一个请求去换 token
+        got_lock = self._acquire_code_lock()
+        if not got_lock:
+            user_info = self.get_cache_info()
+            if user_info:
+                return user_info
+            # 锁被占用但缓存仍未写出：再读一次 profile 缓存尝试 resolve
+            res = self._load_cached_profile()
+            if res:
+                fs_id = res.get('user_id') or res.get('open_id')
+                if fs_id:
+                    with DBContext('w') as session:
+                        user_info = self._resolve_user(session, res)
+                        user_info = self._detach_user(session, user_info)
+                    return user_info
+            logger.warning("[FeiShu] 等待并发登录缓存超时")
+            return None
+
+        # 抢到锁后再查一次缓存（双检，避免重复 Open API）
         user_info = self.get_cache_info()
         if user_info:
             return user_info
@@ -631,6 +798,10 @@ class FeiShuAuth:
         res = self.fetch_user_info()
         fs_id = (res or {}).get('user_id') or (res or {}).get('open_id')
         if not res or not fs_id:
+            # 兑换失败时再看缓存（另一进程可能已成功）
+            user_info = self.get_cache_info()
+            if user_info:
+                return user_info
             logger.warning(
                 f"[FeiShu] 获取用户信息失败或缺少 user_id/open_id: "
                 f"res_keys={list(res.keys()) if isinstance(res, dict) else res}"
@@ -641,35 +812,21 @@ class FeiShuAuth:
         if not res.get('user_id') and res.get('open_id'):
             res['user_id'] = res.get('open_id')
 
+        # 尽早写缓存，缩短并发请求的空窗（code 不可二次兑换）
+        self._cache_user_profile(res)
+
         with DBContext('w') as session:
             user_info = self._resolve_user(session, res)
             user_info = self._detach_user(session, user_info)
 
-        # 缓存勿写入内部 token 字段
-        cache_payload = {
-            k: v for k, v in res.items()
-            if not str(k).startswith('_')
-        }
-        self.redis_conn.set(
-            f"feishu_login_cache___{self.code}",
-            json.dumps(cache_payload, ensure_ascii=False),
-            ex=180,
-        )
+        # resolve 可能补全了 email/mobile/avatar，再写一次
+        self._cache_user_profile(res)
         return user_info
 
     def get_cache_info(self):
-        cached = self.redis_conn.get(f"feishu_login_cache___{self.code}")
-        if not cached:
+        res = self._load_cached_profile()
+        if not res:
             return None
-
-        cached = self._decode_cached(cached)
-        try:
-            res = json.loads(cached)
-            if not isinstance(res, dict):
-                res = {'user_id': str(res)}
-        except (TypeError, json.JSONDecodeError):
-            # 兼容旧缓存（只存了 fs_id 字符串）
-            res = {'user_id': cached}
 
         fs_id = res.get('user_id') or res.get('open_id')
         if isinstance(fs_id, bytes):
